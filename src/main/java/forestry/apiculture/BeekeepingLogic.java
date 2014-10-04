@@ -146,12 +146,12 @@ public class BeekeepingLogic implements IBeekeepingLogic {
 	}
 	
 	private void doQueenWorkCycle() {
-			doProduction();
-			queen.plantFlowerRandom(housing);
-			doPollination();
-			// Age the queen
-			queen.age(housing.getWorld(), housing.getLifespanModifier(queen.getGenome(), queen.getMate(), 0f));
-			updateQueenItemNBT();
+		doProduction();
+		queen.plantFlowerRandom(housing);
+		doPollination();
+		// Age the queen
+		queen.age(housing.getWorld(), housing.getLifespanModifier(queen.getGenome(), queen.getMate(), 0f));
+		updateQueenItemNBT();
 	}
 
 	private void doProduction() {
