@@ -113,7 +113,7 @@ public class BeekeepingLogic implements IBeekeepingLogic {
 			return;
 		}
 		
-		if (!hasHealthyQueen() || isBreedingPrincess()) {
+		if (tryBreedingPrincess() || !hasHealthyQueen()) {
 			return;
 		}
 		
@@ -224,7 +224,7 @@ public class BeekeepingLogic implements IBeekeepingLogic {
 		return hasQueen;
 	}
 	
-	private boolean isBreedingPrincess() {
+	private boolean tryBreedingPrincess() {
 		boolean isBreedingPrincess = false;
 
 		// Princess available? Try to breed!
