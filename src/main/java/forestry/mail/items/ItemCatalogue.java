@@ -4,36 +4,27 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail.items;
 
-import forestry.api.core.ForestryAPI;
-import forestry.core.items.ItemForestry;
-import forestry.core.network.GuiId;
-import forestry.core.proxy.Proxies;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
 
-public class ItemCatalogue extends ItemForestry {
+import forestry.core.items.ItemWithGui;
+import forestry.mail.gui.ContainerCatalogue;
+import forestry.mail.gui.GuiCatalogue;
 
-	public ItemCatalogue() {
-		super();
-		setMaxStackSize(1);
+public class ItemCatalogue extends ItemWithGui {
+	@Override
+	public Object getGui(EntityPlayer player, ItemStack heldItem, int data) {
+		return new GuiCatalogue(player);
 	}
 
 	@Override
-	public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer entityplayer) {
-		if (Proxies.common.isSimulating(world)) {
-			entityplayer.openGui(ForestryAPI.instance, GuiId.CatalogueGUI.ordinal(), world, (int) entityplayer.posX, (int) entityplayer.posY,
-					(int) entityplayer.posZ);
-		}
-
-		return itemstack;
+	public Object getContainer(EntityPlayer player, ItemStack heldItem, int data) {
+		return new ContainerCatalogue(player);
 	}
-
-
 }

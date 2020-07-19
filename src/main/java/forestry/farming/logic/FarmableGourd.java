@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -16,9 +16,9 @@ import net.minecraft.world.World;
 
 import forestry.api.farming.ICrop;
 import forestry.api.farming.IFarmable;
-import forestry.core.config.Defaults;
-import forestry.core.utils.StackUtils;
-import forestry.core.vect.Vect;
+import forestry.core.config.Constants;
+import forestry.core.utils.ItemStackUtil;
+import forestry.core.utils.vect.Vect;
 
 public class FarmableGourd implements IFarmable {
 
@@ -34,24 +34,28 @@ public class FarmableGourd implements IFarmable {
 
 	@Override
 	public boolean isSaplingAt(World world, int x, int y, int z) {
-		if (world.isAirBlock(x, y, z))
+		if (world.isAirBlock(x, y, z)) {
 			return false;
+		}
 
-		return StackUtils.equals(world.getBlock(x, y, z), stem);
+		return ItemStackUtil.equals(world.getBlock(x, y, z), stem);
 	}
 
 	@Override
 	public ICrop getCropAt(World world, int x, int y, int z) {
-		if (world.isAirBlock(x, y, z))
+		if (world.isAirBlock(x, y, z)) {
 			return null;
+		}
 
-		if (!StackUtils.equals(world.getBlock(x, y, z), fruit))
+		if (!ItemStackUtil.equals(world.getBlock(x, y, z), fruit)) {
 			return null;
+		}
 
-		if (world.getBlockMetadata(x, y, z) != fruit.getItemDamage())
+		if (world.getBlockMetadata(x, y, z) != fruit.getItemDamage()) {
 			return null;
+		}
 
-		return new CropBlock(world, StackUtils.getBlock(fruit), fruit.getItemDamage(), new Vect(x, y, z));
+		return new CropBlock(world, ItemStackUtil.getBlock(fruit), fruit.getItemDamage(), new Vect(x, y, z));
 	}
 
 	@Override
@@ -66,7 +70,7 @@ public class FarmableGourd implements IFarmable {
 
 	@Override
 	public boolean plantSaplingAt(EntityPlayer player, ItemStack germling, World world, int x, int y, int z) {
-		return world.setBlock(x, y, z, StackUtils.getBlock(stem), 0, Defaults.FLAG_BLOCK_SYNCH);
+		return world.setBlock(x, y, z, ItemStackUtil.getBlock(stem), 0, Constants.FLAG_BLOCK_SYNCH);
 	}
 
 }

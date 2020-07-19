@@ -4,13 +4,11 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.arboriculture.proxy;
-
-import net.minecraft.world.World;
 
 public class ProxyArboriculture {
 
@@ -29,7 +27,4 @@ public class ProxyArboriculture {
 		return 6396257;
 	}
 
-	public int getBiomeFoliageColour(World world, int x, int z) {
-		return getFoliageColorBasic();
-	}
 }

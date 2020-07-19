@@ -4,31 +4,34 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.arboriculture;
 
-import forestry.api.arboriculture.ITreeGenome;
-import forestry.api.genetics.IFruitFamily;
-import forestry.plugins.PluginArboriculture;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import forestry.api.arboriculture.ITreeGenome;
+import forestry.api.arboriculture.TreeManager;
+import forestry.api.genetics.IFruitFamily;
+
 public class FruitProviderRipening extends FruitProviderNone {
 
-	HashMap<ItemStack, Float> products = new HashMap<ItemStack, Float>();
+	private final Map<ItemStack, Float> products = new HashMap<>();
 
-	int colourRipe = 0xffffff;
-	int colourCallow = 0xffffff;
+	private int colourCallow = 0xffffff;
 
-	int diffR, diffG, diffB = 0;
+	private int diffR;
+	private int diffG;
+	private int diffB;
 
 	public FruitProviderRipening(String key, IFruitFamily family, ItemStack product, float modifier) {
 		super(key, family);
@@ -36,7 +39,6 @@ public class FruitProviderRipening extends FruitProviderNone {
 	}
 
 	public FruitProviderRipening setColours(int ripe, int callow) {
-		colourRipe = ripe;
 		colourCallow = callow;
 
 		diffR = (ripe >> 16 & 255) - (callow >> 16 & 255);
@@ -52,25 +54,29 @@ public class FruitProviderRipening extends FruitProviderNone {
 	}
 
 	private float getRipeningStage(int ripeningTime) {
-		if (ripeningTime >= ripeningPeriod)
+		if (ripeningTime >= ripeningPeriod) {
 			return 1.0f;
+		}
 
 		return (float) ripeningTime / ripeningPeriod;
 	}
 
 	@Override
 	public ItemStack[] getFruits(ITreeGenome genome, World world, int x, int y, int z, int ripeningTime) {
-		ArrayList<ItemStack> product = new ArrayList<ItemStack>();
+		ArrayList<ItemStack> product = new ArrayList<>();
 
 		float stage = getRipeningStage(ripeningTime);
-		if (stage < 0.5f)
+		if (stage < 0.5f) {
 			return new ItemStack[0];
+		}
 
-		float modeYieldMod = PluginArboriculture.treeInterface.getTreekeepingMode(world).getYieldModifier(genome, 1f);
+		float modeYieldMod = TreeManager.treeRoot.getTreekeepingMode(world).getYieldModifier(genome, 1f);
 
-		for (Map.Entry<ItemStack, Float> entry : products.entrySet())
-			if (world.rand.nextFloat() <= genome.getYield() * entry.getValue() * modeYieldMod * 5.0f * stage)
+		for (Map.Entry<ItemStack, Float> entry : products.entrySet()) {
+			if (world.rand.nextFloat() <= genome.getYield() * entry.getValue() * modeYieldMod * 5.0f * stage) {
 				product.add(entry.getKey().copy());
+			}
+		}
 
 		return product.toArray(new ItemStack[product.size()]);
 	}

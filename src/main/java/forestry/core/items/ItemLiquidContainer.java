@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -23,7 +23,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.EnumAction;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MovingObjectPosition;
@@ -44,13 +43,8 @@ import forestry.core.fluids.FluidHelper;
 import forestry.core.proxy.Proxies;
 import forestry.core.render.TextureManager;
 
-public class ItemLiquidContainer extends Item {
-
-	public static enum EnumContainerType {
-		GLASS, JAR, CAN, CAPSULE, REFRACTORY, BUCKET
-	}
-
-	private static final Map<Block, ItemLiquidContainer> buckets = new HashMap<Block, ItemLiquidContainer>();
+public class ItemLiquidContainer extends ItemForestry {
+	private static final Map<Block, ItemLiquidContainer> buckets = new HashMap<>();
 
 	private boolean isDrink = false;
 	private boolean isAlwaysEdible = false;
@@ -63,10 +57,10 @@ public class ItemLiquidContainer extends Item {
 	private final Color color;
 
 	public ItemLiquidContainer(EnumContainerType type, Block contents, Color color) {
+		super(CreativeTabForestry.tabForestry);
 		this.type = type;
 		this.contents = contents;
 		this.color = color;
-		setCreativeTab(CreativeTabForestry.tabForestry);
 		if (type == EnumContainerType.BUCKET) {
 			setContainerItem(Items.bucket);
 			this.maxStackSize = 1;
@@ -78,20 +72,23 @@ public class ItemLiquidContainer extends Item {
 		return buckets.get(contents);
 	}
 
-	private int getMatchingSlot(EntityPlayer player, ItemStack stack) {
+	private static int getMatchingSlot(EntityPlayer player, ItemStack stack) {
 
-		for (int slot = 0; slot < player.inventory.getSizeInventory(); slot++) {
+		for (int slot = 0; slot < player.inventory.mainInventory.length; slot++) {
 			ItemStack slotStack = player.inventory.getStackInSlot(slot);
 
-			if (slotStack == null)
+			if (slotStack == null) {
 				return slot;
+			}
 
-			if (!slotStack.isItemEqual(stack))
+			if (!slotStack.isItemEqual(stack)) {
 				continue;
+			}
 
 			int space = slotStack.getMaxStackSize() - slotStack.stackSize;
-			if (space >= stack.stackSize)
+			if (space >= stack.stackSize) {
 				return slot;
+			}
 		}
 
 		return -1;
@@ -99,11 +96,12 @@ public class ItemLiquidContainer extends Item {
 
 	@Override
 	public ItemStack onEaten(ItemStack itemstack, World world, EntityPlayer entityplayer) {
-		if (!isDrink)
+		if (!isDrink) {
 			return itemstack;
+		}
 
 		itemstack.stackSize--;
-		entityplayer.getFoodStats().addStats(this.getHealAmount(), this.getSaturationModifier());
+		entityplayer.getFoodStats().addStats(healAmount, saturationModifier);
 		world.playSoundAtEntity(entityplayer, "random.burp", 0.5F, world.rand.nextFloat() * 0.1F + 0.9F);
 		/*
 		 * if (!world.isRemote && potionId > 0 && world.rand.nextFloat() < potionEffectProbability) entityplayer.addPotionEffect(new PotionEffect(potionId,
@@ -115,30 +113,34 @@ public class ItemLiquidContainer extends Item {
 
 	@Override
 	public int getMaxItemUseDuration(ItemStack itemstack) {
-		if (isDrink)
+		if (isDrink) {
 			return 32;
-		else
+		} else {
 			return super.getMaxItemUseDuration(itemstack);
+		}
 	}
 
 	@Override
 	public EnumAction getItemUseAction(ItemStack itemstack) {
-		if (isDrink)
+		if (isDrink) {
 			return EnumAction.drink;
-		else
+		} else {
 			return EnumAction.none;
+		}
 	}
 
 	@Override
 	public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer entityplayer) {
 
-		if (!Proxies.common.isSimulating(world))
+		if (world.isRemote) {
 			return itemstack;
+		}
 
 		// / DRINKS can be drunk
 		if (isDrink) {
-			if (entityplayer.canEat(isAlwaysEdible))
+			if (entityplayer.canEat(isAlwaysEdible)) {
 				entityplayer.setItemInUse(itemstack, getMaxItemUseDuration(itemstack));
+			}
 			return itemstack;
 		}
 
@@ -154,7 +156,7 @@ public class ItemLiquidContainer extends Item {
 			FluidStack fluid = null;
 
 			if (targetedBlock instanceof IFluidBlock) {
-				fluid = ((IFluidBlock)targetedBlock).drain(world, x, y, z, false);
+				fluid = ((IFluidBlock) targetedBlock).drain(world, x, y, z, false);
 			} else {
 				if (targetedBlock == Blocks.water || targetedBlock == Blocks.flowing_water) {
 					fluid = new FluidStack(FluidRegistry.WATER, 1000);
@@ -163,27 +165,31 @@ public class ItemLiquidContainer extends Item {
 				}
 			}
 
-			if (fluid == null || fluid.amount <= 0 && this.type == EnumContainerType.BUCKET)
+			if (fluid == null || fluid.amount <= 0 && this.type == EnumContainerType.BUCKET) {
 				return tryPlaceLiquid(itemstack, world, entityplayer, movingobjectposition);
+			}
 
 			ItemStack filledContainer = FluidHelper.getFilledContainer(fluid.getFluid(), itemstack);
-			if (filledContainer == null)
+			if (filledContainer == null) {
 				return itemstack;
+			}
 
 			// Search for a slot to stow a filled container in player's
 			// inventory
 			int slot = getMatchingSlot(entityplayer, filledContainer);
-			if (slot < 0)
+			if (slot < 0) {
 				return itemstack;
+			}
 
-			if (entityplayer.inventory.getStackInSlot(slot) == null)
+			if (entityplayer.inventory.getStackInSlot(slot) == null) {
 				entityplayer.inventory.setInventorySlotContents(slot, filledContainer.copy());
-			else
+			} else {
 				entityplayer.inventory.getStackInSlot(slot).stackSize++;
+			}
 
 			// Remove consumed liquid block in world
 			if (targetedBlock instanceof IFluidBlock) {
-				((IFluidBlock)targetedBlock).drain(world, x, y, z, true);
+				((IFluidBlock) targetedBlock).drain(world, x, y, z, true);
 			} else {
 				world.setBlockToAir(x, y, z);
 			}
@@ -216,12 +222,24 @@ public class ItemLiquidContainer extends Item {
 		int z = movingobjectposition.blockZ;
 
 		switch (movingobjectposition.sideHit) {
-			case 0: --y; break;
-			case 1: ++y; break;
-			case 2: --z; break;
-			case 3: ++z; break;
-			case 4: --x; break;
-			case 5: ++x; break;
+			case 0:
+				--y;
+				break;
+			case 1:
+				++y;
+				break;
+			case 2:
+				--z;
+				break;
+			case 3:
+				++z;
+				break;
+			case 4:
+				--x;
+				break;
+			case 5:
+				++x;
+				break;
 		}
 
 		if (!player.canPlayerEdit(x, y, z, movingobjectposition.sideHit, itemstack)) {
@@ -275,15 +293,6 @@ public class ItemLiquidContainer extends Item {
 		}
 	}
 
-
-	public int getHealAmount() {
-		return healAmount;
-	}
-
-	public float getSaturationModifier() {
-		return saturationModifier;
-	}
-
 	public ItemLiquidContainer setDrink(int healAmount, float saturationModifier) {
 		isDrink = true;
 		this.healAmount = healAmount;
@@ -308,17 +317,18 @@ public class ItemLiquidContainer extends Item {
 	@Override
 	public void registerIcons(IIconRegister register) {
 		icons = new IIcon[2];
-		icons[0] = TextureManager.getInstance().registerTex(register, "liquids/" + type.toString().toLowerCase(Locale.ENGLISH) + ".bottle");
-		icons[1] = TextureManager.getInstance().registerTex(register, "liquids/" + type.toString().toLowerCase(Locale.ENGLISH) + ".contents");
+		icons[0] = TextureManager.registerTex(register, "liquids/" + type.toString().toLowerCase(Locale.ENGLISH) + ".bottle");
+		icons[1] = TextureManager.registerTex(register, "liquids/" + type.toString().toLowerCase(Locale.ENGLISH) + ".contents");
 	}
 
 	@SideOnly(Side.CLIENT)
 	@Override
 	public IIcon getIconFromDamageForRenderPass(int i, int j) {
-		if (j > 0 && color != null)
+		if (j > 0 && color != null) {
 			return icons[1];
-		else
+		} else {
 			return icons[0];
+		}
 	}
 
 	// Return true to enable color overlay
@@ -329,10 +339,11 @@ public class ItemLiquidContainer extends Item {
 
 	@Override
 	public int getColorFromItemStack(ItemStack itemstack, int j) {
-		if (j > 0 && color != null)
+		if (j > 0 && color != null) {
 			return color.getRGB() & 0xffffff; // remove alpha
-		else
+		} else {
 			return 0xffffff;
+		}
 	}
 
 	public EnumContainerType getType() {

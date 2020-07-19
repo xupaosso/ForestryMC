@@ -4,76 +4,39 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.gui;
 
-import forestry.api.core.IToolPipette;
-import forestry.core.fluids.tanks.StandardTank;
-import forestry.core.gadgets.TileForestry;
-import forestry.core.interfaces.ILiquidTankContainer;
-import forestry.core.network.PacketIds;
-import forestry.core.network.PacketPayload;
-import forestry.core.network.PacketUpdate;
-import forestry.core.proxy.Proxies;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.ICrafting;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.tileentity.TileEntity;
 
-public class ContainerLiquidTanks extends ContainerForestry {
+import net.minecraftforge.fluids.IFluidTank;
 
-	private final ILiquidTankContainer tile;
+import forestry.core.tiles.ILiquidTankTile;
 
-	public <T extends TileForestry & ILiquidTankContainer> ContainerLiquidTanks(IInventory playerInventory, T tile) {
-		super(tile);
-		this.tile = tile;
-	}
+public abstract class ContainerLiquidTanks<T extends TileEntity & ILiquidTankTile> extends ContainerTile<T> implements IContainerLiquidTanks {
 
-	public void handlePipetteClick(int slot, EntityPlayer player) {
+	private final ContainerLiquidTanksHelper<T> helper;
 
-		ItemStack itemstack = player.inventory.getItemStack();
-		if (itemstack == null)
-			return;
-
-		Item held = itemstack.getItem();
-		if (!(held instanceof IToolPipette))
-			return;
-
-		if (!Proxies.common.isSimulating(player.worldObj)) {
-			PacketPayload payload = new PacketPayload(1, 0, 0);
-			payload.intPayload[0] = slot;
-			Proxies.net.sendToServer(new PacketUpdate(PacketIds.PIPETTE_CLICK, payload));
-			return;
-		}
-
-		IToolPipette pipette = (IToolPipette) held;
-		StandardTank tank = tile.getTankManager().get(slot);
-		int liquidAmount = tank.getFluidAmount();
-
-		if (pipette.canPipette(itemstack) && liquidAmount > 0) {
-			if (liquidAmount > 0) {
-				FluidStack fillAmount = tank.drain(1000, false);
-				int filled = pipette.fill(itemstack, fillAmount, true);
-				tank.drain(filled, true);
-			}
-		} else {
-			FluidStack potential = pipette.drain(itemstack, pipette.getCapacity(itemstack), false);
-			if (potential != null)
-				pipette.drain(itemstack, tank.fill(potential, true), true);
-		}
+	protected ContainerLiquidTanks(T tile, InventoryPlayer playerInventory, int xInv, int yInv) {
+		super(tile, playerInventory, xInv, yInv);
+		this.helper = new ContainerLiquidTanksHelper<>(tile);
 	}
 
 	@Override
-	public void updateProgressBar(int messageId, int data) {
-		super.updateProgressBar(messageId, data);
+	public void handlePipetteClickClient(int slot, EntityPlayer player) {
+		helper.handlePipetteClickClient(slot, player);
+	}
 
-		tile.getTankManager().processGuiUpdate(messageId, data);
-		tile.getGUINetworkData(messageId, data);
+	@Override
+	public void handlePipetteClick(int slot, EntityPlayerMP player) {
+		helper.handlePipetteClick(slot, player);
 	}
 
 	@Override
@@ -81,17 +44,21 @@ public class ContainerLiquidTanks extends ContainerForestry {
 	public void detectAndSendChanges() {
 		super.detectAndSendChanges();
 		tile.getTankManager().updateGuiData(this, crafters);
-		for (Object crafter : crafters)
-			tile.sendGUINetworkData(this, (ICrafting) crafter);
 	}
 
 	@Override
 	public void addCraftingToCrafters(ICrafting icrafting) {
 		super.addCraftingToCrafters(icrafting);
-		tile.getTankManager().initGuiData(this, icrafting);
+		tile.getTankManager().containerAdded(this, icrafting);
 	}
 
-	public StandardTank getTank(int slot) {
-		return tile.getTankManager().get(slot);
+	@Override
+	public void onContainerClosed(EntityPlayer entityPlayer) {
+		super.onContainerClosed(entityPlayer);
+		tile.getTankManager().containerRemoved(this);
+	}
+
+	public IFluidTank getTank(int slot) {
+		return tile.getTankManager().getTank(slot);
 	}
 }

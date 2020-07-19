@@ -4,32 +4,31 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.circuits;
 
-import forestry.api.circuits.ICircuitLayout;
-import forestry.core.circuits.ItemSolderingIron.CircuitRecipe;
-import forestry.core.circuits.ItemSolderingIron.SolderingInventory;
-import forestry.core.config.Defaults;
-import forestry.core.gadgets.TileForestry;
-import forestry.core.gui.GuiForestry;
-import forestry.core.proxy.Proxies;
-import forestry.core.utils.StringUtil;
+import java.util.Locale;
+
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.IInventory;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
-public class GuiSolderingIron extends GuiForestry<TileForestry> {
+import forestry.api.circuits.CircuitSocketType;
+import forestry.api.circuits.ICircuitLayout;
+import forestry.api.circuits.ICircuitSocketType;
+import forestry.api.farming.FarmDirection;
+import forestry.core.config.Constants;
+import forestry.core.gui.GuiForestry;
+import forestry.core.inventory.ItemInventorySolderingIron;
+import forestry.core.utils.StringUtil;
 
-	private final IInventory inventory;
+public class GuiSolderingIron extends GuiForestry<ContainerSolderingIron, ItemInventorySolderingIron> {
 
-	public GuiSolderingIron(InventoryPlayer inventoryplayer, SolderingInventory inventory) {
-		super(Defaults.TEXTURE_PATH_GUI + "/solder.png", new ContainerSolderingIron(inventoryplayer, inventory), inventory);
-
-		this.inventory = inventory;
+	public GuiSolderingIron(EntityPlayer player, ItemInventorySolderingIron inventory) {
+		super(Constants.TEXTURE_PATH_GUI + "/solder.png", new ContainerSolderingIron(player, inventory), inventory);
 
 		xSize = 176;
 		ySize = 205;
@@ -41,18 +40,34 @@ public class GuiSolderingIron extends GuiForestry<TileForestry> {
 
 		ICircuitLayout layout = ((ContainerSolderingIron) inventorySlots).getLayout();
 		String title = layout.getName();
-		fontRendererObj.drawString(title, guiLeft + 8 + getCenteredOffset(title, 138), guiTop + 16, fontColor.get("gui.screen"));
+		fontRendererObj.drawString(title, guiLeft + 8 + textLayout.getCenteredOffset(title, 138), guiTop + 16, fontColor.get("gui.screen"));
 
-		for (int l = 2; l < inventory.getSizeInventory(); l++) {
+		for (int i = 0; i < 4; i++) {
 			String description;
-			CircuitRecipe recipe = ItemSolderingIron.SolderManager.getMatchingRecipe(layout, inventory.getStackInSlot(l));
-			if (recipe == null)
+			ItemStack tube = inventory.getStackInSlot(i + 2);
+			CircuitRecipe recipe = SolderManager.getMatchingRecipe(layout, tube);
+			if (recipe == null) {
 				description = "(" + StringUtil.localize("gui.noeffect") + ")";
-			else
-				description = StringUtil.localize(recipe.circuit.getName()) + " (" + recipe.circuit.getLimit() + ")";
+			} else {
+				description = StringUtil.localize(recipe.getCircuit().getName()) + " (" + recipe.getCircuit().getLimit() + ")";
+			}
 
-			int row = (l - 2) * 20;
+			int row = i * 20;
 			fontRendererObj.drawString(description, guiLeft + 32, guiTop + 36 + row, fontColor.get("gui.screen"));
+
+			if (tube == null) {
+				try {
+					ICircuitSocketType socketType = layout.getSocketType();
+					if (CircuitSocketType.FARM.equals(socketType)) {
+						FarmDirection farmDirection = FarmDirection.values()[i];
+						String farmDirectionString = farmDirection.toString().toLowerCase(Locale.ENGLISH);
+						String localizedDirection = StringUtil.localize("gui.solder." + farmDirectionString);
+						fontRendererObj.drawString(localizedDirection, guiLeft + 17, guiTop + 36 + row, fontColor.get("gui.screen"));
+					}
+				} catch (Throwable ignored) {
+					// older circuit layouts do not have getSocketType()
+				}
+			}
 		}
 	}
 
@@ -70,10 +85,11 @@ public class GuiSolderingIron extends GuiForestry<TileForestry> {
 	protected void actionPerformed(GuiButton guibutton) {
 		super.actionPerformed(guibutton);
 
-		if (guibutton.id == 1)
-			((ContainerSolderingIron) inventorySlots).regressSelection(0, Proxies.common.getRenderWorld());
-		else if (guibutton.id == 2)
-			((ContainerSolderingIron) inventorySlots).advanceSelection(0, Proxies.common.getRenderWorld());
+		if (guibutton.id == 1) {
+			ContainerSolderingIron.regressSelection(0);
+		} else if (guibutton.id == 2) {
+			ContainerSolderingIron.advanceSelection(0);
+		}
 	}
 
 }

@@ -10,27 +10,30 @@
  ******************************************************************************/
 package forestry.core.triggers;
 
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.util.IIcon;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
+import forestry.core.render.TextureManager;
+import forestry.core.utils.StringUtil;
+
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.ITriggerExternal;
 import buildcraft.api.statements.StatementManager;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import forestry.core.render.TextureManager;
-import forestry.core.utils.StringUtil;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.util.IIcon;
 
 public abstract class Trigger implements ITriggerExternal {
 
 	private final String uid;
 	private final String unlocalized;
 
-	public Trigger(String uid) {
+	protected Trigger(String uid) {
 		this(uid, uid);
 	}
 
-	public Trigger(String uid, String localization) {
+	protected Trigger(String uid, String localization) {
 		this.uid = "forestry:" + uid;
 		unlocalized = "trigger." + localization;
 		StatementManager.registerStatement(this);
@@ -73,7 +76,7 @@ public abstract class Trigger implements ITriggerExternal {
 	@Override
 	@SideOnly(Side.CLIENT)
 	public void registerIcons(IIconRegister register) {
-		icon = TextureManager.getInstance().registerTex(register, "triggers/" + unlocalized.replace("trigger.", ""));
+		icon = TextureManager.registerTex(register, "triggers/" + unlocalized.replace("trigger.", ""));
 	}
 
 	@Override

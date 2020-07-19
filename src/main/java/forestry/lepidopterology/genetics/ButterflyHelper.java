@@ -4,18 +4,30 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.lepidopterology.genetics;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map.Entry;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
+
 import com.mojang.authlib.GameProfile;
+
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IChromosomeType;
 import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.IMutation;
+import forestry.api.lepidopterology.ButterflyManager;
 import forestry.api.lepidopterology.EnumButterflyChromosome;
 import forestry.api.lepidopterology.EnumFlutterType;
 import forestry.api.lepidopterology.IAlleleButterflySpecies;
@@ -24,24 +36,14 @@ import forestry.api.lepidopterology.IButterflyGenome;
 import forestry.api.lepidopterology.IButterflyMutation;
 import forestry.api.lepidopterology.IButterflyRoot;
 import forestry.api.lepidopterology.ILepidopteristTracker;
-import forestry.core.config.ForestryItem;
 import forestry.core.genetics.SpeciesRoot;
-import forestry.core.utils.Utils;
+import forestry.core.utils.EntityUtil;
 import forestry.lepidopterology.entities.EntityButterfly;
 import forestry.plugins.PluginLepidopterology;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map.Entry;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.world.World;
 
 public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 
-	public static int butterflySpeciesCount = -1;
+	private static int butterflySpeciesCount = -1;
 	public static final String UID = "rootButterflies";
 
 	@Override
@@ -59,9 +61,11 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 		if (butterflySpeciesCount < 0) {
 			butterflySpeciesCount = 0;
 			for (Entry<String, IAllele> entry : AlleleManager.alleleRegistry.getRegisteredAlleles().entrySet()) {
-				if (entry.getValue() instanceof IAlleleButterflySpecies)
-					if (((IAlleleButterflySpecies) entry.getValue()).isCounted())
+				if (entry.getValue() instanceof IAlleleButterflySpecies) {
+					if (((IAlleleButterflySpecies) entry.getValue()).isCounted()) {
 						butterflySpeciesCount++;
+					}
+				}
 			}
 		}
 
@@ -75,17 +79,20 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 
 	@Override
 	public EnumFlutterType getType(ItemStack stack) {
-		if(stack == null)
+		if (stack == null) {
 			return EnumFlutterType.NONE;
+		}
 
-		if(ForestryItem.butterflyGE.isItemEqual(stack))
+		Item item = stack.getItem();
+		if (PluginLepidopterology.items.butterflyGE == item) {
 			return EnumFlutterType.BUTTERFLY;
-		else if(ForestryItem.serumGE.isItemEqual(stack))
+		} else if (PluginLepidopterology.items.serumGE == item) {
 			return EnumFlutterType.SERUM;
-		else if(ForestryItem.caterpillarGE.isItemEqual(stack))
+		} else if (PluginLepidopterology.items.caterpillarGE == item) {
 			return EnumFlutterType.CATERPILLAR;
-		else
+		} else {
 			return EnumFlutterType.NONE;
+		}
 	}
 
 	@Override
@@ -100,10 +107,12 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 
 	@Override
 	public IButterfly getMember(ItemStack stack) {
-		if(!stack.hasTagCompound())
+		if (!stack.hasTagCompound()) {
 			return null;
-		if(!isMember(stack))
+		}
+		if (!isMember(stack)) {
 			return null;
+		}
 
 		return new Butterfly(stack.getTagCompound());
 	}
@@ -117,17 +126,17 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 	public ItemStack getMemberStack(IIndividual butterfly, int type) {
 
 		Item butterflyItem;
-		switch(EnumFlutterType.VALUES[type]) {
-		case SERUM:
-			butterflyItem = ForestryItem.serumGE.item();
-			break;
-		case CATERPILLAR:
-			butterflyItem = ForestryItem.caterpillarGE.item();
-			break;
-		case BUTTERFLY:
-		default:
-			butterflyItem = ForestryItem.butterflyGE.item();
-			break;
+		switch (EnumFlutterType.VALUES[type]) {
+			case SERUM:
+				butterflyItem = PluginLepidopterology.items.serumGE;
+				break;
+			case CATERPILLAR:
+				butterflyItem = PluginLepidopterology.items.caterpillarGE;
+				break;
+			case BUTTERFLY:
+			default:
+				butterflyItem = PluginLepidopterology.items.butterflyGE;
+				break;
 		}
 
 		NBTTagCompound nbttagcompound = new NBTTagCompound();
@@ -139,15 +148,16 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 	}
 
 	@Override
-	public EntityLiving spawnButterflyInWorld(World world, IButterfly butterfly, double x, double y, double z) {
-		return (EntityButterfly)Utils.spawnEntity(world, new EntityButterfly(world, butterfly), x, y, z);
+	public EntityButterfly spawnButterflyInWorld(World world, IButterfly butterfly, double x, double y, double z) {
+		return EntityUtil.spawnEntity(world, new EntityButterfly(world, butterfly), x, y, z);
 	}
 
 	@Override
 	public boolean isMated(ItemStack stack) {
 		IButterfly butterfly = getMember(stack);
-		if(butterfly == null)
+		if (butterfly == null) {
 			return false;
+		}
 
 		return butterfly.getMate() != null;
 	}
@@ -174,7 +184,7 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 	}
 
 	/* TEMPLATES */
-	public static final ArrayList<IButterfly> butterflyTemplates = new ArrayList<IButterfly>();
+	private static final ArrayList<IButterfly> butterflyTemplates = new ArrayList<>();
 
 	@Override
 	public ArrayList<IButterfly> getIndividualTemplates() {
@@ -183,34 +193,38 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 
 	@Override
 	public IAllele[] getDefaultTemplate() {
-		return ButterflyTemplates.getDefaultTemplate();
+		return MothDefinition.Brimstone.getTemplate();
 	}
 
 	@Override
 	public void registerTemplate(String identifier, IAllele[] template) {
-		butterflyTemplates.add(PluginLepidopterology.butterflyInterface.templateAsIndividual(template));
+		butterflyTemplates.add(ButterflyManager.butterflyRoot.templateAsIndividual(template));
 		speciesTemplates.put(identifier, template);
 	}
 
 	/* MUTATIONS */
-	private static final ArrayList<IButterflyMutation> butterflyMutations = new ArrayList<IButterflyMutation>();
+	private static final ArrayList<IButterflyMutation> butterflyMutations = new ArrayList<>();
 
 	@Override
 	public void registerMutation(IMutation mutation) {
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getTemplate()[0].getUID()))
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getTemplate()[0].getUID())) {
 			return;
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele0().getUID()))
+		}
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele0().getUID())) {
 			return;
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele1().getUID()))
+		}
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele1().getUID())) {
 			return;
+		}
 
-		butterflyMutations.add((IButterflyMutation)mutation);
+		butterflyMutations.add((IButterflyMutation) mutation);
 	}
 
 	@Override
 	public Collection<IButterflyMutation> getMutations(boolean shuffle) {
-		if (shuffle)
+		if (shuffle) {
 			Collections.shuffle(butterflyMutations);
+		}
 		return butterflyMutations;
 	}
 
@@ -222,9 +236,12 @@ public class ButterflyHelper extends SpeciesRoot implements IButterflyRoot {
 
 		// Create a tracker if there is none yet.
 		if (tracker == null) {
-			tracker = new LepidopteristTracker(filename, player);
+			tracker = new LepidopteristTracker(filename);
 			world.setItemData(filename, tracker);
 		}
+
+		tracker.setUsername(player);
+		tracker.setWorld(world);
 
 		return tracker;
 	}

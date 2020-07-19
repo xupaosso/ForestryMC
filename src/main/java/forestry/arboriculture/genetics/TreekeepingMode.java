@@ -4,16 +4,17 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.arboriculture.genetics;
 
-import forestry.api.arboriculture.ITreeGenome;
-import forestry.api.arboriculture.ITreekeepingMode;
 import java.util.ArrayList;
 import java.util.Locale;
+
+import forestry.api.arboriculture.ITreeGenome;
+import forestry.api.arboriculture.ITreekeepingMode;
 
 public class TreekeepingMode implements ITreekeepingMode {
 
@@ -44,7 +45,7 @@ public class TreekeepingMode implements ITreekeepingMode {
 
 	@Override
 	public ArrayList<String> getDescription() {
-		ArrayList<String> ret = new ArrayList<String>();
+		ArrayList<String> ret = new ArrayList<>();
 		ret.add("treemode." + name.toLowerCase(Locale.ENGLISH) + ".desc");
 		return ret;
 	}

@@ -4,20 +4,21 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.genetics;
 
-import forestry.api.genetics.IEffectData;
 import net.minecraft.nbt.NBTTagCompound;
+
+import forestry.api.genetics.IEffectData;
 
 public class EffectData implements IEffectData {
 
-	private int[] intData;
+	private final int[] intData;
 	private float[] floatData;
-	private boolean[] boolData;
+	private final boolean[] boolData;
 
 	public EffectData(int intSize, int boolSize) {
 		this.intData = new int[intSize];

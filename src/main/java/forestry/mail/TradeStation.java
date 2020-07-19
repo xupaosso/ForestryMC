@@ -4,13 +4,24 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail;
 
+import java.util.ArrayList;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTUtil;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldSavedData;
+
 import com.mojang.authlib.GameProfile;
+
 import forestry.api.mail.EnumPostage;
 import forestry.api.mail.ILetter;
 import forestry.api.mail.IMailAddress;
@@ -19,25 +30,16 @@ import forestry.api.mail.IStamps;
 import forestry.api.mail.ITradeStation;
 import forestry.api.mail.PostManager;
 import forestry.api.mail.TradeStationInfo;
-import forestry.core.config.ForestryItem;
-import forestry.core.interfaces.ICrafter;
+import forestry.core.inventory.IInventoryAdapter;
 import forestry.core.inventory.InventoryAdapter;
-import forestry.core.utils.PlayerUtil;
-import forestry.core.utils.StackUtils;
-import forestry.mail.items.ItemLetter;
-import java.util.ArrayList;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Items;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTUtil;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldSavedData;
+import forestry.core.utils.InventoryUtil;
+import forestry.core.utils.ItemStackUtil;
+import forestry.core.utils.StringUtil;
+import forestry.mail.inventory.InventoryTradeStation;
+import forestry.mail.items.EnumStampDefinition;
+import forestry.plugins.PluginMail;
 
-public class TradeStation extends WorldSavedData implements ITradeStation, ISidedInventory {
-
-	// / CONSTANTS
+public class TradeStation extends WorldSavedData implements ITradeStation, IInventoryAdapter {
 	public static final String SAVE_NAME = "TradePO_";
 	public static final short SLOT_TRADEGOOD = 0;
 	public static final short SLOT_TRADEGOOD_COUNT = 1;
@@ -51,16 +53,14 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	public static final short SLOT_RECEIVE_BUFFER_COUNT = 15;
 	public static final short SLOT_SEND_BUFFER = 30;
 	public static final short SLOT_SEND_BUFFER_COUNT = 10;
-	public static final short SLOT_SIZE = SLOT_TRADEGOOD_COUNT + SLOT_EXCHANGE_COUNT + SLOT_LETTERS_COUNT + SLOT_STAMPS_COUNT + SLOT_RECEIVE_BUFFER_COUNT + SLOT_SEND_BUFFER_COUNT;
+	public static final int SLOT_SIZE = SLOT_TRADEGOOD_COUNT + SLOT_EXCHANGE_COUNT + SLOT_LETTERS_COUNT + SLOT_STAMPS_COUNT + SLOT_RECEIVE_BUFFER_COUNT + SLOT_SEND_BUFFER_COUNT;
 
-	// / MEMBER
 	private GameProfile owner;
 	private IMailAddress address;
 	private boolean isVirtual = false;
 	private boolean isInvalid = false;
-	private final InventoryAdapter inventory = new InventoryAdapter(SLOT_SIZE, "INV");
+	private final InventoryAdapter inventory = new InventoryTradeStation();
 
-	// / CONSTRUCTORS
 	public TradeStation(GameProfile owner, IMailAddress address) {
 		super(SAVE_NAME + address);
 		if (!address.isTrader()) {
@@ -70,6 +70,7 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		this.address = address;
 	}
 
+	@SuppressWarnings("unused") // required for WorldSavedData
 	public TradeStation(String savename) {
 		super(savename);
 	}
@@ -139,7 +140,7 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 
 	@Override
 	public TradeStationInfo getTradeInfo() {
-		ItemStack[] condensedRequired = StackUtils.condenseStacks(inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT));
+		ItemStack[] condensedRequired = ItemStackUtil.condenseStacks(InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT));
 
 		// Set current state
 		EnumStationState state = EnumStationState.OK;
@@ -147,14 +148,17 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		// Virtual trade stations are always ready for service.
 		if (!isVirtual()) {
 			// Will assume that the owner should get a notice.
-			if (!hasPaper(2))
+			if (!hasPaper(2)) {
 				state = EnumStationState.INSUFFICIENT_PAPER;
-			
-			if (!canPayPostage(3))
+			}
+
+			if (!canPayPostage(3)) {
 				state = EnumStationState.INSUFFICIENT_STAMPS;
-			
-			if (countFillableOrders(1, inventory.getStackInSlot(SLOT_TRADEGOOD)) <= 0)
+			}
+
+			if (countFillableOrders(1, inventory.getStackInSlot(SLOT_TRADEGOOD)) <= 0) {
 				state = EnumStationState.INSUFFICIENT_TRADE_GOOD;
+			}
 		}
 
 		return new TradeStationInfo(address, owner, inventory.getStackInSlot(SLOT_TRADEGOOD), condensedRequired, state);
@@ -168,61 +172,73 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		
 		ILetter letter = PostManager.postRegistry.getLetter(letterstack);
 
-		if (!isVirtual() && !hasPaper(sendOwnerNotice ? 2 : 1))
+		if (!isVirtual() && !hasPaper(sendOwnerNotice ? 2 : 1)) {
 			return EnumStationState.INSUFFICIENT_PAPER;
+		}
 
-		int ordersToFill = StackUtils.containsSets(inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT), letter.getAttachments());
+		int ordersToFillCount = ItemStackUtil.containsSets(InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT), letter.getAttachments());
 
 		// Not a single match.
-		if (ordersToFill <= 0)
+		if (ordersToFillCount <= 0) {
 			return EnumStationState.INSUFFICIENT_OFFER;
+		}
 
 		if (!isVirtual()) {
-			int fillable = countFillableOrders(ordersToFill, inventory.getStackInSlot(SLOT_TRADEGOOD));
+			int fillable = countFillableOrders(ordersToFillCount, inventory.getStackInSlot(SLOT_TRADEGOOD));
 
 			// Nothing can be filled.
-			if (fillable <= 0)
+			if (fillable <= 0) {
 				return EnumStationState.INSUFFICIENT_TRADE_GOOD;
+			}
 
-			if (fillable < ordersToFill)
-				ordersToFill = fillable;
+			if (fillable < ordersToFillCount) {
+				ordersToFillCount = fillable;
+			}
 
 			// Check for sufficient output buffer
-			int storable = countStorablePayment(ordersToFill, inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT));
+			int storable = countStorablePayment(ordersToFillCount, InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT));
 
-			if (storable <= 0)
+			if (storable <= 0) {
 				return EnumStationState.INSUFFICIENT_BUFFER;
+			}
 
-			if (storable < ordersToFill)
-				ordersToFill = storable;
+			if (storable < ordersToFillCount) {
+				ordersToFillCount = storable;
+			}
 		}
 
 		// Prepare the letter
 		ILetter mail = new Letter(this.address, letter.getSender());
-		mail.setText("Please find your order attached.");
-		for (int i = 0; i < ordersToFill; i++) {
+		mail.setText(StringUtil.localize("gui.mail.order.attached"));
+		for (int i = 0; i < ordersToFillCount; i++) {
 			mail.addAttachment(inventory.getStackInSlot(SLOT_TRADEGOOD).copy());
 		}
-		mail.addAttachments(getSurplusAttachments(ordersToFill, letter.getAttachments()));
+		mail.addAttachments(getSurplusAttachments(ordersToFillCount, letter.getAttachments()));
 
 		// Check for necessary postage
 		int requiredPostage = mail.requiredPostage();
-		if (!isVirtual())
-			if (!canPayPostage(requiredPostage + (sendOwnerNotice ? 1 : 0)))
+		if (!isVirtual()) {
+			if (!canPayPostage(requiredPostage + (sendOwnerNotice ? 1 : 0))) {
 				return EnumStationState.INSUFFICIENT_STAMPS;
+			}
+		}
 
 		// Attach necessary postage
 		int[] stampCount = getPostage(requiredPostage, isVirtual());
 		for (int i = 0; i < stampCount.length; i++) {
-			if (stampCount[i] > 0)
-				mail.addStamps(ForestryItem.stamps.getItemStack(stampCount[i], EnumPostage.values()[i].ordinal() - 1));
+			int count = stampCount[i];
+			if (count > 0) {
+				EnumPostage postage = EnumPostage.values()[i];
+				EnumStampDefinition stampDefinition = EnumStampDefinition.getFromPostage(postage);
+				mail.addStamps(PluginMail.items.stamps.get(stampDefinition, count));
+			}
 		}
 
 		// Send the letter
 		NBTTagCompound nbttagcompound = new NBTTagCompound();
 		mail.writeToNBT(nbttagcompound);
 
-		ItemStack mailstack = ForestryItem.letters.getItemStack(1, ItemLetter.encodeMeta(1, ItemLetter.getType(mail)));
+		ItemStack mailstack = LetterProperties.createStampedLetterStack(mail);
 		mailstack.setTagCompound(nbttagcompound);
 
 		IPostalState responseState = PostManager.postRegistry.getPostOffice(world).lodgeLetter(world, mailstack, doLodge);
@@ -232,36 +248,48 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		}
 
 		// Store received items
-		for (int i = 0; i < ordersToFill; i++) {
-			for (ItemStack stack : inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT)) {
-				if (stack == null)
+		for (int i = 0; i < ordersToFillCount; i++) {
+			for (ItemStack stack : InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT)) {
+				if (stack == null) {
 					continue;
-				
-				inventory.tryAddStack(stack.copy(), SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, false);
+				}
+
+				InventoryUtil.tryAddStack(inventory, stack.copy(), SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, false);
 			}
 		}
 
 		// Remove resources
 		removePaper();
 		removeStamps(stampCount);
-		removeTradegood(ordersToFill);
+		removeTradegood(ordersToFillCount);
 
 		// Send confirmation message to seller
 		if (sendOwnerNotice) {
 			nbttagcompound = new NBTTagCompound();
 
 			ILetter confirm = new Letter(this.address, new MailAddress(this.owner));
-			confirm.setText(ordersToFill + " order(s) from " + letter.getSender().getName() + " were filled.");
-			confirm.addStamps(ForestryItem.stamps.getItemStack(1, EnumPostage.P_1.ordinal() - 1));
+
+			String orderFilledMessage;
+			if (ordersToFillCount == 1) {
+				orderFilledMessage = StringUtil.localize("gui.mail.order.filled.one");
+			} else {
+				orderFilledMessage = StringUtil.localize("gui.mail.order.filled.multiple");
+				orderFilledMessage = orderFilledMessage.replace("%COUNT", Integer.toString(ordersToFillCount));
+			}
+
+			orderFilledMessage = orderFilledMessage.replace("%SENDER", letter.getSender().getName());
+
+			confirm.setText(orderFilledMessage);
+			confirm.addStamps(PluginMail.items.stamps.get(EnumStampDefinition.P_1, 1));
 			confirm.writeToNBT(nbttagcompound);
-					
-			ItemStack confirmstack = ForestryItem.letters.getItemStack(1, ItemLetter.encodeMeta(1, ItemLetter.getType(confirm)));
+
+			ItemStack confirmstack = LetterProperties.createStampedLetterStack(confirm);
 			confirmstack.setTagCompound(nbttagcompound);
 
 			PostManager.postRegistry.getPostOffice(world).lodgeLetter(world, confirmstack, doLodge);
 			
 			removePaper();
-			removeStamps(new int[]{0,1});
+			removeStamps(new int[]{0, 1});
 		}
 		
 		markDirty();
@@ -272,24 +300,30 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	/* TRADE LOGIC */
 	private int countFillableOrders(int max, ItemStack tradegood) {
 
-		if (tradegood == null)
+		if (tradegood == null) {
 			return 0;
-
-		// How many orders are fillable?
-		int itemCount = 0;
-		for (ItemStack stack : inventory.getStacks(SLOT_SEND_BUFFER, SLOT_SEND_BUFFER_COUNT)) {
-			if (stack != null && stack.isItemEqual(tradegood) && ItemStack.areItemStackTagsEqual(stack, tradegood))
-				itemCount += stack.stackSize;
 		}
 
-		return (int) Math.floor(itemCount / tradegood.stackSize);
+		// How many orders are fillable?
+		float orderCount = 0;
+
+		for (ItemStack stack : InventoryUtil.getStacks(inventory, SLOT_SEND_BUFFER, SLOT_SEND_BUFFER_COUNT)) {
+			if (stack != null && stack.isItemEqual(tradegood) && ItemStack.areItemStackTagsEqual(stack, tradegood)) {
+				orderCount += (stack.stackSize / (float) tradegood.stackSize);
+				if (orderCount >= max) {
+					return max;
+				}
+			}
+		}
+
+		return (int) Math.floor(orderCount);
 	}
 
 	public boolean canReceivePayment() {
 		InventoryAdapter test = inventory.copy();
-		ItemStack [] payment = inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT);
+		ItemStack[] payment = InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT);
 
-		return test.tryAddStacksCopy(payment, SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, true);
+		return InventoryUtil.tryAddStacksCopy(test, payment, SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, true);
 	}
 
 	private int countStorablePayment(int max, ItemStack[] exchange) {
@@ -298,10 +332,11 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		int count = 0;
 
 		for (int i = 0; i < max; i++) {
-			if (test.tryAddStacksCopy(exchange, SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, true))
+			if (InventoryUtil.tryAddStacksCopy(test, exchange, SLOT_RECEIVE_BUFFER, SLOT_RECEIVE_BUFFER_COUNT, true)) {
 				count++;
-			else
+			} else {
 				break;
+			}
 		}
 
 		return count;
@@ -313,20 +348,24 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 			int toRemove = inventory.getStackInSlot(SLOT_TRADEGOOD).stackSize;
 			for (int i = SLOT_SEND_BUFFER; i < SLOT_SEND_BUFFER + SLOT_SEND_BUFFER_COUNT; i++) {
 				ItemStack buffer = inventory.getStackInSlot(i);
-				if (buffer == null)
+				if (buffer == null) {
 					continue;
+				}
 
-				if (!buffer.isItemEqual(inventory.getStackInSlot(SLOT_TRADEGOOD)))
+				if (!buffer.isItemEqual(inventory.getStackInSlot(SLOT_TRADEGOOD))) {
 					continue;
+				}
 
-				if (!ItemStack.areItemStackTagsEqual(buffer, inventory.getStackInSlot(SLOT_TRADEGOOD)))
+				if (!ItemStack.areItemStackTagsEqual(buffer, inventory.getStackInSlot(SLOT_TRADEGOOD))) {
 					continue;
+				}
 
 				ItemStack decrease = inventory.decrStackSize(i, toRemove);
 				toRemove -= decrease.stackSize;
 
-				if (toRemove <= 0)
+				if (toRemove <= 0) {
 					break;
+				}
 			}
 		}
 	}
@@ -335,13 +374,15 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	private boolean hasPaper(int amountRequired) {
 		
 		int amountFound = 0;
-		
-		for (ItemStack stack : inventory.getStacks(SLOT_LETTERS_1, SLOT_LETTERS_COUNT)) {
-			if (stack != null)
+
+		for (ItemStack stack : InventoryUtil.getStacks(inventory, SLOT_LETTERS_1, SLOT_LETTERS_COUNT)) {
+			if (stack != null) {
 				amountFound += stack.stackSize;
-			
-			if (amountFound >= amountRequired)
+			}
+
+			if (amountFound >= amountRequired) {
 				return true;
+			}
 		}
 
 		return false;
@@ -360,18 +401,21 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 
 	private boolean canPayPostage(int postage) {
 		int posted = 0;
-		
-		for (ItemStack stamp : inventory.getStacks(SLOT_STAMPS_1, SLOT_STAMPS_COUNT)) {
-			if (stamp == null)
-				continue;
-			
-			if (!(stamp.getItem() instanceof IStamps))
-				continue;
 
-			posted += ((IStamps)stamp.getItem()).getPostage(stamp).getValue() * stamp.stackSize;
-			
-			if (posted >= postage)
+		for (ItemStack stamp : InventoryUtil.getStacks(inventory, SLOT_STAMPS_1, SLOT_STAMPS_COUNT)) {
+			if (stamp == null) {
+				continue;
+			}
+
+			if (!(stamp.getItem() instanceof IStamps)) {
+				continue;
+			}
+
+			posted += ((IStamps) stamp.getItem()).getPostage(stamp).getValue() * stamp.stackSize;
+
+			if (posted >= postage) {
 				return true;
+			}
 		}
 
 		return false;
@@ -381,20 +425,24 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		int[] stamps = new int[EnumPostage.values().length];
 
 		for (int i = EnumPostage.values().length - 1; i > 0; i--) {
-			if (postage <= 0)
+			if (postage <= 0) {
 				break;
+			}
 
 			EnumPostage postValue = EnumPostage.values()[i];
 
-			if (postValue.getValue() > postage)
+			if (postValue.getValue() > postage) {
 				continue;
+			}
 
 			int num = 99;
-			if (!virtual)
+			if (!virtual) {
 				num = getNumStamps(postValue);
+			}
 			int max = (int) Math.floor(postage / postValue.getValue());
-			if (max < num)
+			if (max < num) {
 				num = max;
+			}
 
 			stamps[i] = num;
 			postage -= num * postValue.getValue();
@@ -405,14 +453,17 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 
 	private int getNumStamps(EnumPostage postage) {
 		int count = 0;
-		for (ItemStack stamp : inventory.getStacks(SLOT_STAMPS_1, SLOT_STAMPS_COUNT)) {
-			if (stamp == null)
+		for (ItemStack stamp : InventoryUtil.getStacks(inventory, SLOT_STAMPS_1, SLOT_STAMPS_COUNT)) {
+			if (stamp == null) {
 				continue;
-			if (!(stamp.getItem() instanceof IStamps))
+			}
+			if (!(stamp.getItem() instanceof IStamps)) {
 				continue;
+			}
 
-			if (((IStamps) stamp.getItem()).getPostage(stamp) == postage)
+			if (((IStamps) stamp.getItem()).getPostage(stamp) == postage) {
 				count += stamp.stackSize;
+			}
 
 		}
 
@@ -422,19 +473,23 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	private void removeStamps(int[] stampCount) {
 		for (int i = 1; i < stampCount.length; i++) {
 
-			if (stampCount[i] <= 0)
+			if (stampCount[i] <= 0) {
 				continue;
+			}
 
 			for (int j = SLOT_STAMPS_1; j < SLOT_STAMPS_1 + SLOT_STAMPS_COUNT; j++) {
-				if (stampCount[i] <= 0)
+				if (stampCount[i] <= 0) {
 					continue;
+				}
 
 				ItemStack stamp = inventory.getStackInSlot(j);
-				if (stamp == null)
+				if (stamp == null) {
 					continue;
-				
-				if (!(stamp.getItem() instanceof IStamps))
+				}
+
+				if (!(stamp.getItem() instanceof IStamps)) {
 					continue;
+				}
 
 				if (((IStamps) stamp.getItem()).getPostage(stamp) == EnumPostage.values()[i]) {
 					ItemStack decrease = inventory.decrStackSize(j, stampCount[i]);
@@ -445,25 +500,29 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	}
 
 	private ItemStack[] getSurplusAttachments(int filled, ItemStack[] attachments) {
-		ArrayList<ItemStack> surplus = new ArrayList<ItemStack>();
+		ArrayList<ItemStack> surplus = new ArrayList<>();
 
 		// Get a copy of the attachments to play with
 		ItemStack[] pool = new ItemStack[attachments.length];
 		for (int i = 0; i < attachments.length; i++) {
-			if (attachments[i] != null)
+			if (attachments[i] != null) {
 				pool[i] = attachments[i].copy();
+			}
 		}
 
 		// Remove stuff until we are only left with the remnants
 		for (int i = 0; i < filled; i++) {
-			ItemStack[] condensedRequired = StackUtils.condenseStacks(inventory.getStacks(SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT));
+			ItemStack[] required = InventoryUtil.getStacks(inventory, SLOT_EXCHANGE_1, SLOT_EXCHANGE_COUNT);
+			ItemStack[] condensedRequired = ItemStackUtil.condenseStacks(required);
 			for (ItemStack req : condensedRequired) {
 				for (int j = 0; j < pool.length; j++) {
 					ItemStack pol = pool[j];
-					if (pol == null)
+					if (pol == null) {
 						continue;
-					if (!pol.isItemEqual(req))
+					}
+					if (!pol.isItemEqual(req)) {
 						continue;
+					}
 
 					if (req.stackSize >= pol.stackSize) {
 						req.stackSize -= pol.stackSize;
@@ -477,8 +536,9 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 		}
 
 		for (ItemStack stack : pool) {
-			if (stack != null)
+			if (stack != null) {
 				surplus.add(stack);
+			}
 		}
 
 		return surplus.toArray(new ItemStack[surplus.size()]);
@@ -529,7 +589,7 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 
 	@Override
 	public boolean isUseableByPlayer(EntityPlayer player) {
-		return PlayerUtil.isSameGameProfile(owner, player.getGameProfile());
+		return true;
 	}
 
 	@Override
@@ -541,67 +601,38 @@ public class TradeStation extends WorldSavedData implements ITradeStation, ISide
 	}
 
 	@Override
+	public boolean isItemValidForSlot(int i, ItemStack itemStack) {
+		return inventory.isItemValidForSlot(i, itemStack);
+	}
+
+	@Override
 	public boolean hasCustomInventoryName() {
 		return true;
 	}
 
 	@Override
-	public boolean isItemValidForSlot(int slot, ItemStack itemStack) {
-		if (itemStack == null || itemStack.getItem() == null)
-			return false;
-
-		if (slot >= SLOT_LETTERS_1 && slot < SLOT_LETTERS_1 + SLOT_LETTERS_COUNT)
-			return itemStack.getItem() == Items.paper;
-
-		if (slot >= SLOT_STAMPS_1 && slot < SLOT_STAMPS_1 + SLOT_STAMPS_COUNT)
-			return itemStack.getItem() instanceof IStamps;
-
-		if (slot >= SLOT_SEND_BUFFER && slot < SLOT_SEND_BUFFER + SLOT_SEND_BUFFER_COUNT) {
-			ItemStack item = StackUtils.createSplitStack(itemStack, 1);
-			return inventory.contains(item, SLOT_TRADEGOOD, SLOT_TRADEGOOD_COUNT);
-		}
-
-		return false;
-	}
-
-	@Override
 	public int[] getAccessibleSlotsFromSide(int side) {
-		return getAccessibleSlotsFromSide(side, false);
-	}
-
-	public int[] getAccessibleSlotsFromSide(int side, boolean permission) {
-
-		ArrayList<Integer> slots = new ArrayList<Integer>();
-
-		for (int i = SLOT_LETTERS_1; i < SLOT_LETTERS_1 + SLOT_LETTERS_COUNT; i++)
-			slots.add(i);
-		for (int i = SLOT_STAMPS_1; i < SLOT_STAMPS_1 + SLOT_STAMPS_COUNT; i++)
-			slots.add(i);
-		if (permission) {
-			for (int i = SLOT_RECEIVE_BUFFER; i < SLOT_RECEIVE_BUFFER + SLOT_RECEIVE_BUFFER_COUNT; i++)
-				slots.add(i);
-		}
-		for (int i = SLOT_SEND_BUFFER; i < SLOT_SEND_BUFFER + SLOT_SEND_BUFFER_COUNT; i++)
-			slots.add(i);
-
-		int[] slotsInt = new int[slots.size()];
-		for (int i = 0; i < slots.size(); i++)
-			slotsInt[i] = slots.get(i);
-
-		return slotsInt;
+		return inventory.getAccessibleSlotsFromSide(side);
 	}
 
 	@Override
 	public boolean canInsertItem(int slot, ItemStack itemStack, int side) {
-		return isItemValidForSlot(slot, itemStack);
+		return inventory.canInsertItem(slot, itemStack, side);
 	}
 
 	@Override
 	public boolean canExtractItem(int slot, ItemStack itemStack, int side) {
-		return canExtractItem(slot, itemStack, side, false);
+		return inventory.canExtractItem(slot, itemStack, side);
 	}
 
-	public boolean canExtractItem(int slot, ItemStack itemStack, int side, boolean permission) {
-		return permission && slot >= SLOT_RECEIVE_BUFFER && slot < SLOT_RECEIVE_BUFFER + SLOT_RECEIVE_BUFFER_COUNT;
+	@Override
+	public boolean canSlotAccept(int slotIndex, ItemStack itemStack) {
+		return inventory.canSlotAccept(slotIndex, itemStack);
 	}
+
+	@Override
+	public boolean isLocked(int slotIndex) {
+		return inventory.isLocked(slotIndex);
+	}
+
 }

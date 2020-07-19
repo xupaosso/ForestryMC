@@ -4,65 +4,36 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail.gui;
 
+import java.util.ArrayList;
+
+import org.apache.commons.lang3.StringUtils;
+
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.entity.player.EntityPlayer;
+
+import org.lwjgl.input.Keyboard;
+
 import forestry.api.mail.EnumAddressee;
 import forestry.api.mail.IMailAddress;
-import forestry.api.mail.IPostalCarrier;
-import forestry.api.mail.PostManager;
-import forestry.core.config.Defaults;
+import forestry.core.config.Constants;
 import forestry.core.config.SessionVars;
-import forestry.core.gadgets.TileForestry;
 import forestry.core.gui.GuiForestry;
 import forestry.core.gui.GuiTextBox;
+import forestry.core.gui.widgets.ItemStackWidget;
 import forestry.core.gui.widgets.Widget;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.StringUtil;
-import forestry.mail.items.ItemLetter.LetterInventory;
-import java.util.ArrayList;
-import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.entity.player.EntityPlayer;
-import org.apache.commons.lang3.StringUtils;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
+import forestry.mail.gui.widgets.AddresseeSlot;
+import forestry.mail.inventory.ItemInventoryLetter;
+import forestry.mail.network.packets.PacketLetterInfoRequest;
 
-public class GuiLetter extends GuiForestry<TileForestry> {
-
-	protected class AddresseeSlot extends Widget {
-
-		public AddresseeSlot(int xPos, int yPos) {
-			super(widgetManager, xPos, yPos);
-			this.width = 26;
-			this.height = 15;
-		}
-
-		@Override
-		public void draw(int startX, int startY) {
-
-			GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0F);
-			//mc.renderEngine.bindTexture(Defaults.TEXTURE_PATH_GUI + "/letter.png");
-			IPostalCarrier carrier = PostManager.postRegistry.getCarrier(container.getCarrierType());
-			if(carrier != null)
-				drawTexturedModelRectFromIcon(startX + xPos, startY + yPos - 5, carrier.getIcon(), 26, 26);
-
-		}
-
-		@Override
-		protected String getLegacyTooltip(EntityPlayer player) {
-			return StringUtil.localize("gui.addressee." + container.getCarrierType().toString());
-		}
-
-		@Override
-		public void handleMouseClick(int mouseX, int mouseY, int mouseButton) {
-			if(!isProcessedLetter)
-				container.advanceCarrierType();
-		}
-
-	}
+public class GuiLetter extends GuiForestry<ContainerLetter, ItemInventoryLetter> {
 
 	private final boolean isProcessedLetter;
 	private boolean checkedSessionVars;
@@ -74,17 +45,15 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 	private boolean textFocus;
 
 	private final ArrayList<Widget> tradeInfoWidgets;
-	private final ContainerLetter container;
 
-	public GuiLetter(EntityPlayer player, LetterInventory inventory) {
-		super(Defaults.TEXTURE_PATH_GUI + "/letter.png", new ContainerLetter(player, inventory), inventory);
+	public GuiLetter(EntityPlayer player, ItemInventoryLetter inventory) {
+		super(Constants.TEXTURE_PATH_GUI + "/letter.png", new ContainerLetter(player, inventory), inventory);
 		this.xSize = 194;
 		this.ySize = 227;
 
-		this.container = (ContainerLetter) inventorySlots;
 		this.isProcessedLetter = container.getLetter().isProcessed();
-		this.widgetManager.add(new AddresseeSlot(16, 12));
-		this.tradeInfoWidgets = new ArrayList<Widget>();
+		this.widgetManager.add(new AddresseeSlot(widgetManager, 16, 12, container));
+		this.tradeInfoWidgets = new ArrayList<>();
 	}
 
 	@Override
@@ -101,8 +70,9 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 
 		text = new GuiTextBox(this.fontRendererObj, guiLeft + 17, guiTop + 31, 122, 57);
 		text.setMaxStringLength(128);
-		if (!container.getText().isEmpty())
+		if (!container.getText().isEmpty()) {
 			text.setText(container.getText());
+		}
 	}
 
 	@Override
@@ -110,25 +80,28 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 
 		// Set focus or enter text into address
 		if (this.address.isFocused()) {
-			if (eventKey == Keyboard.KEY_RETURN)
+			if (eventKey == Keyboard.KEY_RETURN) {
 				this.address.setFocused(false);
-			else
+			} else {
 				this.address.textboxKeyTyped(eventCharacter, eventKey);
+			}
 			return;
 		}
 
 		if (this.text.isFocused()) {
 			if (eventKey == Keyboard.KEY_RETURN) {
-				if(Proxies.common.isShiftDown())
+				if (Proxies.common.isShiftDown()) {
 					text.setText(text.getText() + "\n");
-				else
+				} else {
 					this.text.setFocused(false);
-			} else if(eventKey == Keyboard.KEY_DOWN) {
+				}
+			} else if (eventKey == Keyboard.KEY_DOWN) {
 				text.advanceLine();
-			} else if(eventKey == Keyboard.KEY_UP) {
+			} else if (eventKey == Keyboard.KEY_UP) {
 				text.regressLine();
-			} else if(text.moreLinesAllowed() || eventKey == Keyboard.KEY_DELETE || eventKey == Keyboard.KEY_BACK)
+			} else if (text.moreLinesAllowed() || eventKey == Keyboard.KEY_DELETE || eventKey == Keyboard.KEY_BACK) {
 				this.text.textboxKeyTyped(eventCharacter, eventKey);
+			}
 			return;
 		}
 
@@ -147,7 +120,7 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 	@Override
 	protected void drawGuiContainerBackgroundLayer(float var1, int mouseX, int mouseY) {
 
-		if(!isProcessedLetter && !checkedSessionVars) {
+		if (!isProcessedLetter && !checkedSessionVars) {
 			checkedSessionVars = true;
 			setFromSessionVars();
 			String recipient = this.address.getText();
@@ -164,8 +137,9 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 			}
 		}
 		addressFocus = address.isFocused();
-		if (textFocus != text.isFocused())
+		if (textFocus != text.isFocused()) {
 			setText();
+		}
 		textFocus = text.isFocused();
 
 		super.drawGuiContainerBackgroundLayer(var1, mouseX, mouseY);
@@ -176,22 +150,24 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 		} else {
 			clearTradeInfoWidgets();
 			address.drawTextBox();
-			if (container.getCarrierType() == EnumAddressee.TRADER)
+			if (container.getCarrierType() == EnumAddressee.TRADER) {
 				drawTradePreview(18, 32);
-			else
+			} else {
 				text.drawTextBox();
+			}
 		}
 	}
 
 	private void drawTradePreview(int x, int y) {
 
 		String infoString = null;
-		if (container.getTradeInfo() == null)
+		if (container.getTradeInfo() == null) {
 			infoString = "gui.mail.notrader";
-		else if (container.getTradeInfo().tradegood == null)
+		} else if (container.getTradeInfo().tradegood == null) {
 			infoString = "gui.mail.nothingtotrade";
-		else if (!container.getTradeInfo().state.isOk())
+		} else if (!container.getTradeInfo().state.isOk()) {
 			infoString = "chat.mail." + container.getTradeInfo().state.getIdentifier();
+		}
 
 		if (infoString != null) {
 			fontRendererObj.drawSplitString(StringUtil.localize(infoString), guiLeft + x, guiTop + y, 119, fontColor.get("gui.mail.lettertext"));
@@ -200,13 +176,12 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 
 		fontRendererObj.drawString(StringUtil.localize("gui.mail.pleasesend"), guiLeft + x, guiTop + y, fontColor.get("gui.mail.lettertext"));
 
-		addTradeInfoWidget(new ItemStackWidget(x, y + 10, container.getTradeInfo().tradegood));
+		addTradeInfoWidget(new ItemStackWidget(widgetManager, x, y + 10, container.getTradeInfo().tradegood));
 
-		GL11.glDisable(GL11.GL_LIGHTING);
 		fontRendererObj.drawString(StringUtil.localize("gui.mail.foreveryattached"), guiLeft + x, guiTop + y + 28, fontColor.get("gui.mail.lettertext"));
-		GL11.glEnable(GL11.GL_LIGHTING);
+
 		for (int i = 0; i < container.getTradeInfo().required.length; i++) {
-			addTradeInfoWidget(new ItemStackWidget(x + i * 18, y + 38, container.getTradeInfo().required[i]));
+			addTradeInfoWidget(new ItemStackWidget(widgetManager, x + i * 18, y + 38, container.getTradeInfo().required[i]));
 		}
 	}
 
@@ -231,15 +206,11 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 		Keyboard.enableRepeatEvents(false);
 		super.onGuiClosed();
 	}
-	
-	@Override
-	protected boolean checkHotbarKeys(int key) {
-		return false;
-	}
 
 	private void setFromSessionVars() {
-		if(SessionVars.getStringVar("mail.letter.recipient") == null)
+		if (SessionVars.getStringVar("mail.letter.recipient") == null) {
 			return;
+		}
 
 		String recipient = SessionVars.getStringVar("mail.letter.recipient");
 		String typeName = SessionVars.getStringVar("mail.letter.addressee");
@@ -256,16 +227,20 @@ public class GuiLetter extends GuiForestry<TileForestry> {
 	}
 
 	private void setRecipient(String recipientName, EnumAddressee type) {
-		if (this.isProcessedLetter || StringUtils.isBlank(recipientName) || type == null)
+		if (this.isProcessedLetter || StringUtils.isBlank(recipientName) || type == null) {
 			return;
+		}
 
-		container.setRecipient(recipientName, type);
+		PacketLetterInfoRequest packet = new PacketLetterInfoRequest(recipientName, type);
+		Proxies.net.sendToServer(packet);
 	}
 
 	private void setText() {
-		if (this.isProcessedLetter)
+		if (this.isProcessedLetter) {
 			return;
+		}
 
 		container.setText(this.text.getText());
 	}
+
 }

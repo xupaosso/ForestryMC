@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -15,11 +15,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 
 /**
- *
  * @author CovertJaguar <http://www.railcraft.info/>
  */
 public class RootCommand extends CommandBase implements IForestryCommand {
@@ -27,7 +27,7 @@ public class RootCommand extends CommandBase implements IForestryCommand {
 	public static final String ROOT_COMMAND_NAME = "forestry";
 	public static final String ROOT_COMMAND_ALIAS = "for";
 
-	private final SortedSet<SubCommand> children = new TreeSet<SubCommand>(new Comparator<SubCommand>() {
+	private final SortedSet<SubCommand> children = new TreeSet<>(new Comparator<SubCommand>() {
 
 		@Override
 		public int compare(SubCommand o1, SubCommand o2) {
@@ -54,8 +54,9 @@ public class RootCommand extends CommandBase implements IForestryCommand {
 
 	@Override
 	public void processCommand(ICommandSender sender, String[] args) {
-		if (!CommandHelpers.processStandardCommands(sender, this, args))
+		if (!CommandHelpers.processStandardCommands(sender, this, args)) {
 			CommandHelpers.throwWrongUsage(sender, this);
+		}
 	}
 
 	/**
@@ -69,7 +70,7 @@ public class RootCommand extends CommandBase implements IForestryCommand {
 
 	@Override
 	public List<String> getCommandAliases() {
-		List<String> aliases = new ArrayList<String>();
+		List<String> aliases = new ArrayList<>();
 		aliases.add(ROOT_COMMAND_ALIAS);
 		return aliases;
 	}

@@ -10,14 +10,16 @@
  ******************************************************************************/
 package forestry.core.inventory.manipulators;
 
-import forestry.core.inventory.InvTools;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+
 import forestry.core.inventory.filters.IStackFilter;
 import forestry.core.inventory.wrappers.IInvSlot;
 import forestry.core.inventory.wrappers.InventoryIterator;
-import java.util.ArrayList;
-import java.util.List;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
+import forestry.core.utils.InventoryUtil;
 
 /**
  * @author CovertJaguar <http://www.railcraft.info>
@@ -48,6 +50,7 @@ public class InventoryManipulator {
 
 	/**
 	 * Attempt to add the stack to the inventory.
+	 *
 	 * @return The remainder
 	 */
 	public ItemStack addStack(ItemStack stack) {
@@ -59,8 +62,8 @@ public class InventoryManipulator {
 			return null;
 		}
 		stack = stack.copy();
-		List<IInvSlot> filledSlots = new ArrayList<IInvSlot>(inv.getSizeInventory());
-		List<IInvSlot> emptySlots = new ArrayList<IInvSlot>(inv.getSizeInventory());
+		List<IInvSlot> filledSlots = new ArrayList<>(inv.getSizeInventory());
+		List<IInvSlot> emptySlots = new ArrayList<>(inv.getSizeInventory());
 		for (IInvSlot slot : InventoryIterator.getIterable(inv)) {
 			if (slot.canPutStackInSlot(stack)) {
 				if (slot.getStackInSlot() == null) {
@@ -87,7 +90,7 @@ public class InventoryManipulator {
 		}
 		for (IInvSlot slot : slots) {
 			ItemStack stackInSlot = slot.getStackInSlot();
-			if (stackInSlot == null || InvTools.isItemEqual(stackInSlot, stack)) {
+			if (stackInSlot == null || InventoryUtil.isItemEqual(stackInSlot, stack)) {
 				int used = addToSlot(slot, stack, stack.stackSize - injected, doAdd);
 				if (used > 0) {
 					injected += used;
@@ -118,7 +121,7 @@ public class InventoryManipulator {
 			return wanted;
 		}
 
-		if (!InvTools.isItemEqual(stack, stackInSlot)) {
+		if (!InventoryUtil.isItemEqual(stack, stackInSlot)) {
 			return 0;
 		}
 

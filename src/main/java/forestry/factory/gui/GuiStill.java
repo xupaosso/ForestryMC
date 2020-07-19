@@ -4,22 +4,23 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.factory.gui;
 
-import forestry.core.config.Defaults;
-import forestry.core.gui.GuiForestryTitled;
-import forestry.core.gui.widgets.TankWidget;
-import forestry.factory.gadgets.MachineStill;
 import net.minecraft.entity.player.InventoryPlayer;
 
-public class GuiStill extends GuiForestryTitled<MachineStill> {
+import forestry.core.config.Constants;
+import forestry.core.gui.GuiForestryTitled;
+import forestry.core.gui.widgets.TankWidget;
+import forestry.factory.tiles.TileStill;
 
-	public GuiStill(InventoryPlayer inventory, MachineStill tile) {
-		super(Defaults.TEXTURE_PATH_GUI + "/still.png", new ContainerStill(inventory, tile), tile);
+public class GuiStill extends GuiForestryTitled<ContainerStill, TileStill> {
+
+	public GuiStill(InventoryPlayer inventory, TileStill tile) {
+		super(Constants.TEXTURE_PATH_GUI + "/still.png", new ContainerStill(inventory, tile), tile);
 		widgetManager.add(new TankWidget(this.widgetManager, 35, 15, 0));
 		widgetManager.add(new TankWidget(this.widgetManager, 125, 15, 1));
 	}
@@ -27,15 +28,14 @@ public class GuiStill extends GuiForestryTitled<MachineStill> {
 	@Override
 	protected void drawGuiContainerBackgroundLayer(float var1, int mouseX, int mouseY) {
 		super.drawGuiContainerBackgroundLayer(var1, mouseX, mouseY);
-		MachineStill boiler = tile;
+		TileStill still = inventory;
 
-		if (boiler.isWorking())
-			drawTexturedModalRect(guiLeft + 81, guiTop + 57, 176, 60, 14, 14);
+		drawTexturedModalRect(guiLeft + 81, guiTop + 57, 176, 60, 14, 14);
 
-		int massRemaining = boiler.getDistillationProgressScaled(16);
-		if (massRemaining > 0)
-			drawTexturedModalRect(guiLeft + 84, guiTop + 17 + 17 - massRemaining, 176, 74 + 17 - massRemaining, 4, massRemaining);
-
+		if (still.getWorkCounter() > 0) {
+			int massRemaining = still.getProgressScaled(16);
+			drawTexturedModalRect(guiLeft + 84, guiTop + 17 + massRemaining, 176, 74 + massRemaining, 4, 17 - massRemaining);
+		}
 	}
 
 }

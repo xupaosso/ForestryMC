@@ -4,22 +4,23 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.logic;
 
-import forestry.api.arboriculture.ITree;
-import forestry.api.genetics.AlleleManager;
-import forestry.api.genetics.IIndividual;
-import forestry.plugins.PluginArboriculture;
-import java.util.Map;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
+import forestry.api.arboriculture.ITree;
+import forestry.api.arboriculture.TreeManager;
+import forestry.api.genetics.IIndividual;
+import forestry.core.utils.GeneticsUtil;
+import forestry.plugins.PluginManager;
 
 public class FarmableVanillaSapling extends FarmableGenericSapling {
 
@@ -29,17 +30,16 @@ public class FarmableVanillaSapling extends FarmableGenericSapling {
 
 	@Override
 	public boolean plantSaplingAt(EntityPlayer player, ItemStack germling, World world, int x, int y, int z) {
-		ITree tree = null;
-		for (Map.Entry<ItemStack, IIndividual> entry : AlleleManager.ersatzSaplings.entrySet())
-			if (entry.getKey().isItemEqual(germling) && entry.getValue() instanceof ITree) {
-				tree = (ITree) entry.getValue();
-				break;
+		if (PluginManager.Module.ARBORICULTURE.isEnabled()) {
+			IIndividual tree = GeneticsUtil.getGeneticEquivalent(germling);
+			if (!(tree instanceof ITree)) {
+				return false;
 			}
 
-		if (tree == null)
-			return false;
-
-		return PluginArboriculture.treeInterface.plantSapling(world, tree, player.getGameProfile(), x, y, z);
+			return TreeManager.treeRoot.plantSapling(world, (ITree) tree, player.getGameProfile(), x, y, z);
+		} else {
+			return germling.copy().tryPlaceItemIntoWorld(player, world, x, y - 1, z, 1, 0, 0, 0);
+		}
 	}
 
 }

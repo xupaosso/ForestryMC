@@ -10,17 +10,20 @@
  ******************************************************************************/
 package forestry.arboriculture.commands;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
+import net.minecraft.world.World;
+
 import com.mojang.authlib.GameProfile;
+
 import forestry.api.arboriculture.IAlleleTreeSpecies;
+import forestry.api.arboriculture.TreeManager;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleSpecies;
 import forestry.api.genetics.IBreedingTracker;
 import forestry.core.commands.IStatsSaveHelper;
-import forestry.plugins.PluginArboriculture;
-import java.util.ArrayList;
-import java.util.Collection;
-import net.minecraft.world.World;
 
 public class TreeStatsSaveHelper implements IStatsSaveHelper {
 
@@ -35,10 +38,12 @@ public class TreeStatsSaveHelper implements IStatsSaveHelper {
 
 	@Override
 	public Collection<IAlleleSpecies> getSpecies() {
-		Collection<IAlleleSpecies> species = new ArrayList<IAlleleSpecies>();
-		for (IAllele allele : AlleleManager.alleleRegistry.getRegisteredAlleles().values())
-			if (allele instanceof IAlleleTreeSpecies)
+		Collection<IAlleleSpecies> species = new ArrayList<>();
+		for (IAllele allele : AlleleManager.alleleRegistry.getRegisteredAlleles().values()) {
+			if (allele instanceof IAlleleTreeSpecies) {
 				species.add((IAlleleTreeSpecies) allele);
+			}
+		}
 		return species;
 	}
 
@@ -49,7 +54,7 @@ public class TreeStatsSaveHelper implements IStatsSaveHelper {
 
 	@Override
 	public IBreedingTracker getBreedingTracker(World world, GameProfile gameProfile) {
-		return PluginArboriculture.treeInterface.getBreedingTracker(world, gameProfile);
+		return TreeManager.treeRoot.getBreedingTracker(world, gameProfile);
 	}
 
 }

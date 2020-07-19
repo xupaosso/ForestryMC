@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -15,50 +15,45 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.ItemStack;
 
 import forestry.api.apiculture.IAlleleBeeSpecies;
 import forestry.apiculture.genetics.BeeGenome;
-import forestry.apiculture.items.ItemBeeGE;
-import forestry.apiculture.items.ItemImprinter.ImprinterInventory;
-import forestry.core.config.Defaults;
-import forestry.core.config.ForestryItem;
-import forestry.core.gadgets.TileForestry;
+import forestry.apiculture.inventory.ItemInventoryImprinter;
+import forestry.core.config.Constants;
 import forestry.core.gui.GuiForestry;
+import forestry.core.gui.GuiUtil;
+import forestry.core.network.packets.PacketGuiSelectRequest;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.StringUtil;
+import forestry.plugins.PluginApiculture;
 
-public class GuiImprinter extends GuiForestry<TileForestry> {
-
-	private final ImprinterInventory inventory;
-	private final ContainerImprinter container;
+public class GuiImprinter extends GuiForestry<ContainerImprinter, ItemInventoryImprinter> {
 
 	private int startX;
 	private int startY;
 
-	private final Map<String, ItemStack> iconStacks = new HashMap<String, ItemStack>();
+	private final Map<String, ItemStack> iconStacks = new HashMap<>();
 
-	public GuiImprinter(InventoryPlayer inventoryplayer, ImprinterInventory inventory) {
-		super(Defaults.TEXTURE_PATH_GUI + "/imprinter.png", new ContainerImprinter(inventoryplayer, inventory), inventory);
-
-		this.inventory = inventory;
-		this.container = (ContainerImprinter) inventorySlots;
+	public GuiImprinter(InventoryPlayer inventoryplayer, ItemInventoryImprinter inventory) {
+		super(Constants.TEXTURE_PATH_GUI + "/imprinter.png", new ContainerImprinter(inventoryplayer, inventory), inventory);
 
 		xSize = 176;
 		ySize = 185;
 
-		List<ItemStack> beeList = new ArrayList<ItemStack>();
-		((ItemBeeGE) ForestryItem.beeDroneGE.item()).addCreativeItems(beeList, false);
-		for (ItemStack beeStack : beeList)
-			iconStacks.put(BeeGenome.getSpecies(beeStack).getUID(), beeStack);
-
+		List<ItemStack> beeList = new ArrayList<>();
+		PluginApiculture.items.beeDroneGE.addCreativeItems(beeList, false);
+		for (ItemStack beeStack : beeList) {
+			IAlleleBeeSpecies species = BeeGenome.getSpecies(beeStack);
+			if (species != null) {
+				iconStacks.put(species.getUID(), beeStack);
+			}
+		}
 	}
 
 	@Override
 	protected void drawGuiContainerBackgroundLayer(float var1, int mouseX, int mouseY) {
-		container.updateContainer(Proxies.common.getRenderWorld());
 		super.drawGuiContainerBackgroundLayer(var1, mouseX, mouseY);
 
 		int offset = (138 - fontRendererObj.getStringWidth(StringUtil.localize("gui.imprinter.name"))) / 2;
@@ -79,18 +74,18 @@ public class GuiImprinter extends GuiForestry<TileForestry> {
 	}
 
 	private void drawBeeSpeciesIcon(IAlleleBeeSpecies bee, int x, int y) {
-		RenderHelper.enableStandardItemLighting();
-		drawItemStack(iconStacks.get(bee.getUID()), x, y);
-		RenderHelper.disableStandardItemLighting();
+		GuiUtil.drawItemStack(this, iconStacks.get(bee.getUID()), x, y);
 	}
 
-	private int getHabitatSlotAtPosition(int i, int j) {
-		int[] xPos = new int[] { 12, 12 };
-		int[] yPos = new int[] { 32, 52 };
+	private static int getHabitatSlotAtPosition(int i, int j) {
+		int[] xPos = new int[]{12, 12};
+		int[] yPos = new int[]{32, 52};
 
-		for (int l = 0; l < xPos.length; l++)
-			if (i >= xPos[l] && i <= xPos[l] + 16 && j >= yPos[l] && j <= yPos[l] + 16)
+		for (int l = 0; l < xPos.length; l++) {
+			if (i >= xPos[l] && i <= xPos[l] + 16 && j >= yPos[l] && j <= yPos[l] + 16) {
 				return l;
+			}
+		}
 
 		return -1;
 	}
@@ -103,13 +98,15 @@ public class GuiImprinter extends GuiForestry<TileForestry> {
 		int cornerY = (height - ySize) / 2;
 
 		int slot = getHabitatSlotAtPosition(i - cornerX, j - cornerY);
-		if (slot < 0)
+		if (slot < 0) {
 			return;
+		}
 
-		if (k == 0)
-			container.advanceSelection(slot, Proxies.common.getRenderWorld());
-		else
-			container.regressSelection(slot, Proxies.common.getRenderWorld());
+		if (k == 0) {
+			advanceSelection(slot);
+		} else {
+			regressSelection(slot);
+		}
 	}
 
 	@Override
@@ -118,5 +115,17 @@ public class GuiImprinter extends GuiForestry<TileForestry> {
 
 		startX = (this.width - this.xSize) / 2;
 		startY = (this.height - this.ySize) / 2;
+	}
+
+	private static void advanceSelection(int index) {
+		sendSelectionChange(index, 0);
+	}
+
+	private static void regressSelection(int index) {
+		sendSelectionChange(index, 1);
+	}
+
+	private static void sendSelectionChange(int index, int advance) {
+		Proxies.net.sendToServer(new PacketGuiSelectRequest(index, advance));
 	}
 }

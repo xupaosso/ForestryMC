@@ -4,32 +4,28 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.genetics;
 
-import forestry.api.genetics.IGenome;
-import forestry.api.genetics.IIndividualLiving;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
+import forestry.api.genetics.IGenome;
+import forestry.api.genetics.IIndividualLiving;
+
 public abstract class IndividualLiving extends Individual implements IIndividualLiving {
 
-	protected int generation;
-	protected boolean isNatural;
-	protected boolean isIrregularMating;
+	private int health;
+	private int maxHealth;
 
-	protected int health;
-	protected int maxHealth;
-
-	public IndividualLiving() {}
+	protected IndividualLiving() {
+	}
 	
-	public IndividualLiving(int newHealth, boolean isNatural, int generation) {
+	protected IndividualLiving(int newHealth) {
 		health = maxHealth = newHealth;
-		this.isNatural = isNatural;
-		this.generation = generation;
 	}
 	
 	/* SAVING & LOADING */
@@ -37,13 +33,6 @@ public abstract class IndividualLiving extends Individual implements IIndividual
 	public void readFromNBT(NBTTagCompound nbttagcompound) {
 
 		super.readFromNBT(nbttagcompound);
-
-		if (nbttagcompound.hasKey("NA"))
-			isNatural = nbttagcompound.getBoolean("NA");
-		else
-			isNatural = true;
-		isIrregularMating = nbttagcompound.getBoolean("IM");
-		generation = nbttagcompound.getInteger("GEN");
 
 		health = nbttagcompound.getInteger("Health");
 		maxHealth = nbttagcompound.getInteger("MaxH");
@@ -55,44 +44,24 @@ public abstract class IndividualLiving extends Individual implements IIndividual
 
 		super.writeToNBT(nbttagcompound);
 
-		nbttagcompound.setBoolean("NA", isNatural);
-		nbttagcompound.setBoolean("IM", isIrregularMating);
-		nbttagcompound.setInteger("GEN", generation);
-
 		nbttagcompound.setInteger("Health", health);
 		nbttagcompound.setInteger("MaxH", maxHealth);
 
 		if (getGenome() != null) {
-			NBTTagCompound NBTmachine = new NBTTagCompound();
-			getGenome().writeToNBT(NBTmachine);
-			nbttagcompound.setTag("Genome", NBTmachine);
+			NBTTagCompound nbtGenome = new NBTTagCompound();
+			getGenome().writeToNBT(nbtGenome);
+			nbttagcompound.setTag("Genome", nbtGenome);
 		}
 		if (getMate() != null) {
-			NBTTagCompound NBTmachine = new NBTTagCompound();
-			getMate().writeToNBT(NBTmachine);
-			nbttagcompound.setTag("Mate", NBTmachine);
+			NBTTagCompound nbtMate = new NBTTagCompound();
+			getMate().writeToNBT(nbtMate);
+			nbttagcompound.setTag("Mate", nbtMate);
 		}
 
 	}
 
 	/* GENERATION */
 	public abstract IGenome getMate();
-	
-	public void setIsNatural(boolean flag) {
-		this.isNatural = flag;
-	}
-
-	public boolean isIrregularMating() {
-		return this.isIrregularMating;
-	}
-
-	public boolean isNatural() {
-		return this.isNatural;
-	}
-
-	public int getGeneration() {
-		return generation;
-	}
 
 	@Override
 	public boolean isAlive() {
@@ -123,15 +92,15 @@ public abstract class IndividualLiving extends Individual implements IIndividual
 			decreaseHealth();
 			ageModifier--;
 		}
-		if (world.rand.nextFloat() < ageModifier)
+		if (world.rand.nextFloat() < ageModifier) {
 			decreaseHealth();
-
+		}
 	}
 
-	public void decreaseHealth() {
-		if (health > 0)
+	private void decreaseHealth() {
+		if (health > 0) {
 			health--;
+		}
 	}
-
 
 }

@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -15,18 +15,7 @@ import forestry.api.world.ITreeGenData;
 public class WorldGenGiganteum extends WorldGenSequoia {
 
 	public WorldGenGiganteum(ITreeGenData tree) {
-		super(tree);
+		super(tree, 35, 15);
 	}
 
-	@Override
-	public void generate() {
-		super.generate();
-		//generateSupportStems(height, girth, 0.8f, 0.6f);
-	}
-
-	@Override
-	public void preGenerate() {
-		height = determineHeight(35, 15);
-		girth = determineGirth(tree.getGirth(world, startX, startY, startZ));
-	}
 }

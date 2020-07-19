@@ -4,30 +4,31 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.lepidopterology.genetics;
 
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
 import forestry.api.genetics.EnumTolerance;
-import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleFloat;
 import forestry.api.genetics.IAlleleFlowers;
 import forestry.api.genetics.IAlleleInteger;
+import forestry.api.genetics.IAlleleSpecies;
 import forestry.api.genetics.IChromosome;
 import forestry.api.genetics.IFlowerProvider;
 import forestry.api.genetics.ISpeciesRoot;
+import forestry.api.lepidopterology.ButterflyManager;
 import forestry.api.lepidopterology.EnumButterflyChromosome;
 import forestry.api.lepidopterology.IAlleleButterflyEffect;
 import forestry.api.lepidopterology.IAlleleButterflySpecies;
 import forestry.api.lepidopterology.IButterflyGenome;
-import forestry.core.genetics.AlleleBoolean;
-import forestry.core.genetics.AlleleTolerance;
 import forestry.core.genetics.Genome;
-import forestry.plugins.PluginLepidopterology;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
+import forestry.core.genetics.alleles.AlleleBoolean;
+import forestry.core.genetics.alleles.AlleleTolerance;
 
 public class ButterflyGenome extends Genome implements IButterflyGenome {
 
@@ -42,11 +43,16 @@ public class ButterflyGenome extends Genome implements IButterflyGenome {
 
 	// NBT RETRIEVAL
 	public static IAlleleButterflySpecies getSpecies(ItemStack itemStack) {
-		IAllele speciesAllele = Genome.getActiveAllele(itemStack, EnumButterflyChromosome.SPECIES);
-		if (speciesAllele instanceof IAlleleButterflySpecies)
-			return (IAlleleButterflySpecies)speciesAllele;
-		else
+		if (!ButterflyManager.butterflyRoot.isMember(itemStack)) {
 			return null;
+		}
+		
+		IAlleleSpecies species = getSpeciesDirectly(itemStack);
+		if (species instanceof IAlleleButterflySpecies) {
+			return (IAlleleButterflySpecies) species;
+		}
+
+		return (IAlleleButterflySpecies) getActiveAllele(itemStack, EnumButterflyChromosome.SPECIES, ButterflyManager.butterflyRoot);
 	}
 
 	/* SPECIES */
@@ -122,7 +128,7 @@ public class ButterflyGenome extends Genome implements IButterflyGenome {
 
 	@Override
 	public ISpeciesRoot getSpeciesRoot() {
-		return PluginLepidopterology.butterflyInterface;
+		return ButterflyManager.butterflyRoot;
 	}
 
 }

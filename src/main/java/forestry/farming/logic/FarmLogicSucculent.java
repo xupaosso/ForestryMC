@@ -4,28 +4,31 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.logic;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import forestry.api.farming.Farmables;
-import forestry.api.farming.ICrop;
-import forestry.api.farming.IFarmHousing;
-import forestry.api.farming.IFarmable;
-import forestry.core.utils.StackUtils;
-import forestry.core.vect.Vect;
 import java.util.Collection;
 import java.util.Stack;
+
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
+import forestry.api.farming.FarmDirection;
+import forestry.api.farming.Farmables;
+import forestry.api.farming.ICrop;
+import forestry.api.farming.IFarmHousing;
+import forestry.api.farming.IFarmable;
+import forestry.core.utils.ItemStackUtil;
+import forestry.core.utils.vect.Vect;
 
 public class FarmLogicSucculent extends FarmLogic {
 
@@ -45,10 +48,11 @@ public class FarmLogicSucculent extends FarmLogic {
 
 	@Override
 	public String getName() {
-		if (isManual)
+		if (isManual) {
 			return "Manual Succulent Farm";
-		else
+		} else {
 			return "Managed Succulent Farm";
+		}
 	}
 
 	@Override
@@ -63,18 +67,25 @@ public class FarmLogicSucculent extends FarmLogic {
 
 	@Override
 	public boolean isAcceptedResource(ItemStack itemstack) {
-		if (isManual)
+		if (isManual) {
 			return false;
+		}
 
-		return StackUtils.equals(Blocks.sand, itemstack);
+		return ItemStackUtil.equals(Blocks.sand, itemstack);
 	}
 
 	@Override
 	public boolean isAcceptedGermling(ItemStack itemstack) {
-		if (isManual)
+		if (isManual) {
 			return false;
+		}
 
-		return StackUtils.equals(Blocks.cactus, itemstack);
+		return ItemStackUtil.equals(Blocks.cactus, itemstack);
+	}
+
+	@Override
+	public boolean isAcceptedWindfall(ItemStack stack) {
+		return false;
 	}
 
 	@Override
@@ -83,21 +94,22 @@ public class FarmLogicSucculent extends FarmLogic {
 	}
 
 	@Override
-	public boolean cultivate(int x, int y, int z, ForgeDirection direction, int extent) {
+	public boolean cultivate(int x, int y, int z, FarmDirection direction, int extent) {
 		return false;
 	}
 
 	@Override
-	public Collection<ICrop> harvest(int x, int y, int z, ForgeDirection direction, int extent) {
+	public Collection<ICrop> harvest(int x, int y, int z, FarmDirection direction, int extent) {
 		World world = getWorld();
 
-		Stack<ICrop> crops = new Stack<ICrop>();
+		Stack<ICrop> crops = new Stack<>();
 		for (int i = 0; i < extent; i++) {
 			Vect position = translateWithOffset(x, y + 1, z, direction, i);
 			for (IFarmable seed : germlings) {
 				ICrop crop = seed.getCropAt(world, position.x, position.y, position.z);
-				if (crop != null)
+				if (crop != null) {
 					crops.push(crop);
+				}
 			}
 		}
 		return crops;

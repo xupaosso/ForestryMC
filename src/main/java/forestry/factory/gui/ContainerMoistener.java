@@ -4,66 +4,68 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.factory.gui;
 
-import forestry.core.gui.ContainerLiquidTanks;
-import forestry.core.gui.slots.SlotCraftAuto;
-import forestry.core.gui.slots.SlotWorking;
-import forestry.core.interfaces.IContainerCrafting;
-import forestry.factory.gadgets.MachineMoistener;
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
 
-public class ContainerMoistener extends ContainerLiquidTanks implements IContainerCrafting {
+import forestry.core.gui.ContainerLiquidTanks;
+import forestry.core.gui.slots.SlotFiltered;
+import forestry.core.gui.slots.SlotWatched;
+import forestry.core.gui.slots.SlotWorking;
+import forestry.core.inventory.watchers.ISlotChangeWatcher;
+import forestry.factory.tiles.TileMoistener;
 
-	protected final MachineMoistener tile;
+public class ContainerMoistener extends ContainerLiquidTanks<TileMoistener> implements ISlotChangeWatcher {
 
-	public ContainerMoistener(InventoryPlayer player, MachineMoistener tile) {
-		super(tile, tile);
+	public ContainerMoistener(InventoryPlayer player, TileMoistener tile) {
+		super(tile, player, 8, 84);
 
-		this.tile = tile;
 		// Stash
 		for (int l = 0; l < 2; l++) {
 			for (int k1 = 0; k1 < 3; k1++) {
-				addSlotToContainer(new Slot(tile, k1 + l * 3, 39 + k1 * 18, 16 + l * 18));
+				addSlotToContainer(new SlotFiltered(tile, k1 + l * 3, 39 + k1 * 18, 16 + l * 18));
 			}
 		}
 		// Reservoir
 		for (int k1 = 0; k1 < 3; k1++) {
-			addSlotToContainer(new Slot(tile, k1 + 6, 39 + k1 * 18, 22 + 36));
+			addSlotToContainer(new SlotFiltered(tile, k1 + 6, 39 + k1 * 18, 22 + 36));
 		}
 
 		// Working slot
 		this.addSlotToContainer(new SlotWorking(tile, 9, 105, 37));
 
 		// Product slot
-		this.addSlotToContainer(new Slot(tile, 10, 143, 55));
+		this.addSlotToContainer(new SlotFiltered(tile, 10, 143, 55));
 		// Boxes
-		this.addSlotToContainer(new SlotCraftAuto(this, tile, 11, 143, 19));
-
-		// Player inventory
-		int var3;
-		for (var3 = 0; var3 < 3; ++var3) {
-			for (int var4 = 0; var4 < 9; ++var4) {
-				this.addSlotToContainer(new Slot(player, var4 + var3 * 9 + 9, 8 + var4 * 18, 84 + var3 * 18));
-			}
-		}
-
-		for (var3 = 0; var3 < 9; ++var3) {
-			this.addSlotToContainer(new Slot(player, var3, 8 + var3 * 18, 142));
-		}
-
+		this.addSlotToContainer(new SlotWatched(tile, 11, 143, 19).setChangeWatcher(this));
 	}
 
 	@Override
-	public void onCraftMatrixChanged(IInventory iinventory, int slot) {
-		tile.setInventorySlotContents(slot, iinventory.getStackInSlot(slot));
+	public void onSlotChanged(IInventory inventory, int slot) {
+		tile.setInventorySlotContents(slot, inventory.getStackInSlot(slot));
 		tile.checkRecipe();
 	}
 
+	@Override
+	public void updateProgressBar(int messageId, int data) {
+		super.updateProgressBar(messageId, data);
+
+		tile.getGUINetworkData(messageId, data);
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void detectAndSendChanges() {
+		super.detectAndSendChanges();
+
+		for (Object crafter : crafters) {
+			tile.sendGUINetworkData(this, (ICrafting) crafter);
+		}
+	}
 }

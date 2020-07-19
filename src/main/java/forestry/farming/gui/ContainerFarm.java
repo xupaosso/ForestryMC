@@ -4,152 +4,71 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.gui;
 
-import forestry.api.farming.IFarmLogic;
-import forestry.core.fluids.TankManager;
-import forestry.core.fluids.tanks.StandardTank;
-import forestry.core.gui.ContainerSocketed;
-import forestry.core.gui.slots.SlotCustom;
-import forestry.core.gui.slots.SlotForestry;
-import forestry.core.gui.slots.SlotLiquidContainer;
-import forestry.core.gui.slots.SlotOutput;
-import forestry.farming.gadgets.TileFarmPlain;
-import forestry.plugins.PluginFarming;
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.ICrafting;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.ItemStack;
 
-public class ContainerFarm extends ContainerSocketed {
+import net.minecraftforge.fluids.IFluidTank;
 
-	private final TileFarmPlain tile;
+import forestry.core.gui.ContainerSocketed;
+import forestry.core.gui.slots.SlotFiltered;
+import forestry.core.gui.slots.SlotOutput;
+import forestry.core.network.packets.PacketGuiUpdate;
+import forestry.farming.multiblock.InventoryFarm;
+import forestry.farming.tiles.TileFarm;
 
-	public ContainerFarm(InventoryPlayer playerinventory, TileFarmPlain tile) {
-		super(tile, tile);
+public class ContainerFarm extends ContainerSocketed<TileFarm> {
 
-		this.tile = tile;
-
-		IInventory inv = tile.getInventory();
+	public ContainerFarm(InventoryPlayer playerInventory, TileFarm tile) {
+		super(tile, playerInventory, 28, 138);
 
 		// Resources
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 2; j++) {
-				addSlotToContainer(new SlotResources(inv, tile.getFarmLogics(), TileFarmPlain.SLOT_RESOURCES_1 + j + i * 2, 123 + j * 18, 22 + i * 18));
+				addSlotToContainer(new SlotFiltered(tile, InventoryFarm.SLOT_RESOURCES_1 + j + i * 2, 123 + j * 18, 22 + i * 18));
 			}
 		}
 
 		// Germlings
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 2; j++) {
-				addSlotToContainer(new SlotGermlings(inv, tile.getFarmLogics(), TileFarmPlain.SLOT_GERMLINGS_1 + j + i * 2, 164 + j * 18, 22 + i * 18));
+				addSlotToContainer(new SlotFiltered(tile, InventoryFarm.SLOT_GERMLINGS_1 + j + i * 2, 164 + j * 18, 22 + i * 18));
 			}
 		}
 
 		// Production 1
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
-				addSlotToContainer(new SlotOutput(inv, TileFarmPlain.SLOT_PRODUCTION_1 + j + i * 2, 123 + j * 18, 86 + i * 18));
+				addSlotToContainer(new SlotOutput(tile, InventoryFarm.SLOT_PRODUCTION_1 + j + i * 2, 123 + j * 18, 86 + i * 18));
 			}
 		}
 
 		// Production 2
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
-				addSlotToContainer(new SlotOutput(inv, TileFarmPlain.SLOT_PRODUCTION_1 + 4 + j + i * 2, 164 + j * 18, 86 + i * 18));
+				addSlotToContainer(new SlotOutput(tile, InventoryFarm.SLOT_PRODUCTION_1 + 4 + j + i * 2, 164 + j * 18, 86 + i * 18));
 			}
 		}
 
 		// Fertilizer
-		addSlotToContainer(new SlotCustom(inv, TileFarmPlain.SLOT_FERTILIZER, 63, 95, PluginFarming.farmFertilizer));
+		addSlotToContainer(new SlotFiltered(tile, InventoryFarm.SLOT_FERTILIZER, 63, 95));
 		// Can Slot
-		addSlotToContainer(new SlotLiquidContainer(inv, TileFarmPlain.SLOT_CAN, 15, 95));
-
-		// Player inventory
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 9; j++) {
-				addSlotToContainer(new Slot(playerinventory, j + i * 9 + 9, 28 + j * 18, 138 + i * 18));
-			}
-		}
-		// Player hotbar
-		for (int i = 0; i < 9; i++) {
-			addSlotToContainer(new Slot(playerinventory, i, 28 + i * 18, 196));
-		}
+		addSlotToContainer(new SlotFiltered(tile, InventoryFarm.SLOT_CAN, 15, 95));
 	}
 
 	@Override
-	public void updateProgressBar(int i, int j) {
-		tile.getGUINetworkData(i, j);
-		TankManager tankManager = tile.getTankManager();
-		if (tankManager != null)
-			tankManager.processGuiUpdate(i, j);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
 	public void detectAndSendChanges() {
 		super.detectAndSendChanges();
-		TankManager tankManager = tile.getTankManager();
-		if (tankManager != null)
-			tankManager.updateGuiData(this, crafters);
-
-		for (Object crafter : crafters) {
-			tile.sendGUINetworkData(this, (ICrafting) crafter);
-		}
+		PacketGuiUpdate packet = new PacketGuiUpdate(tile);
+		sendPacketToCrafters(packet);
 	}
 
-	@Override
-	public void addCraftingToCrafters(ICrafting iCrafting) {
-		super.addCraftingToCrafters(iCrafting);
-		TankManager tankManager = tile.getTankManager();
-		if (tankManager != null)
-			tankManager.initGuiData(this, iCrafting);
+	public IFluidTank getTank(int slot) {
+		return tile.getMultiblockLogic().getController().getTankManager().getTank(slot);
 	}
 
-	public StandardTank getTank(int slot) {
-		return tile.getTankManager().get(slot);
-	}
-
-	private class SlotResources extends SlotForestry {
-
-		private final IFarmLogic[] logics;
-
-		public SlotResources(IInventory inventory, IFarmLogic[] logics, int slotIndex, int xPos, int yPos) {
-			super(inventory, slotIndex, xPos, yPos);
-			this.logics = logics;
-		}
-
-		@Override
-		public boolean isItemValid(ItemStack stack) {
-			for (IFarmLogic logic : logics) {
-				if (logic != null && logic.isAcceptedResource(stack))
-					return true;
-			}
-			return false;
-		}
-	}
-
-	private class SlotGermlings extends SlotForestry {
-
-		private final IFarmLogic[] logics;
-
-		public SlotGermlings(IInventory inventory, IFarmLogic[] logics, int slotIndex, int xPos, int yPos) {
-			super(inventory, slotIndex, xPos, yPos);
-			this.logics = logics;
-		}
-
-		@Override
-		public boolean isItemValid(ItemStack stack) {
-			for (IFarmLogic logic : logics) {
-				if (logic != null && logic.isAcceptedGermling(stack))
-					return true;
-			}
-			return false;
-		}
-	}
 }

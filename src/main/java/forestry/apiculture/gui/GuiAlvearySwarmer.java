@@ -4,21 +4,22 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.apiculture.gui;
 
-import forestry.apiculture.gadgets.TileAlvearySwarmer;
-import forestry.core.config.Defaults;
-import forestry.core.gui.GuiForestry;
 import net.minecraft.entity.player.InventoryPlayer;
 
-public class GuiAlvearySwarmer extends GuiForestry<TileAlvearySwarmer> {
+import forestry.apiculture.multiblock.TileAlvearySwarmer;
+import forestry.core.config.Constants;
+import forestry.core.gui.GuiForestryTitled;
+
+public class GuiAlvearySwarmer extends GuiForestryTitled<ContainerAlvearySwarmer, TileAlvearySwarmer> {
 
 	public GuiAlvearySwarmer(InventoryPlayer inventory, TileAlvearySwarmer tile) {
-		super(Defaults.TEXTURE_PATH_GUI + "/swarmer.png", new ContainerAlvearySwarmer(inventory, tile));
+		super(Constants.TEXTURE_PATH_GUI + "/swarmer.png", new ContainerAlvearySwarmer(inventory, tile), tile);
 	}
 
 }

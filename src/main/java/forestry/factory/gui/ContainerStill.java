@@ -4,38 +4,27 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.factory.gui;
 
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.Slot;
 
 import forestry.core.gui.ContainerLiquidTanks;
-import forestry.core.gui.slots.SlotLiquidContainer;
-import forestry.factory.gadgets.MachineStill;
+import forestry.core.gui.slots.SlotFiltered;
+import forestry.core.gui.slots.SlotOutput;
+import forestry.factory.inventory.InventoryStill;
+import forestry.factory.tiles.TileStill;
 
-public class ContainerStill extends ContainerLiquidTanks {
+public class ContainerStill extends ContainerLiquidTanks<TileStill> {
 
-	public ContainerStill(InventoryPlayer player, MachineStill tile) {
-		super(tile, tile);
+	public ContainerStill(InventoryPlayer player, TileStill tile) {
+		super(tile, player, 8, 84);
 
-		this.addSlotToContainer(new Slot(tile, MachineStill.SLOT_PRODUCT, 150, 54));
-		this.addSlotToContainer(new SlotLiquidContainer(tile, MachineStill.SLOT_RESOURCE, 150, 18, true));
-		this.addSlotToContainer(new SlotLiquidContainer(tile, MachineStill.SLOT_CAN, 10, 36));
-
-		for (int i = 0; i < 3; ++i) {
-			for (int j = 0; j < 9; ++j) {
-				this.addSlotToContainer(new Slot(player, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
-			}
-		}
-
-		for (int i = 0; i < 9; ++i) {
-			this.addSlotToContainer(new Slot(player, i, 8 + i * 18, 142));
-		}
-
+		this.addSlotToContainer(new SlotOutput(tile, InventoryStill.SLOT_PRODUCT, 150, 54));
+		this.addSlotToContainer(new SlotFiltered(tile, InventoryStill.SLOT_RESOURCE, 150, 18));
+		this.addSlotToContainer(new SlotFiltered(tile, InventoryStill.SLOT_CAN, 10, 36));
 	}
-
 }

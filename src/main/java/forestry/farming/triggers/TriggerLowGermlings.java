@@ -4,20 +4,23 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.triggers;
 
+import net.minecraft.inventory.IInventory;
+import net.minecraft.tileentity.TileEntity;
+
+import net.minecraftforge.common.util.ForgeDirection;
+
+import forestry.core.triggers.Trigger;
+import forestry.core.utils.InventoryUtil;
+import forestry.farming.tiles.TileFarmHatch;
+
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
-import forestry.api.core.ITileStructure;
-import forestry.core.triggers.Trigger;
-import forestry.farming.gadgets.TileFarmPlain;
-import forestry.farming.gadgets.TileHatch;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
 
 public class TriggerLowGermlings extends Trigger {
 
@@ -38,13 +41,12 @@ public class TriggerLowGermlings extends Trigger {
 	 */
 	@Override
 	public boolean isTriggerActive(TileEntity tile, ForgeDirection side, IStatementContainer source, IStatementParameter[] parameters) {
-		if (!(tile instanceof TileHatch))
+		if (!(tile instanceof TileFarmHatch)) {
 			return false;
+		}
 
-		ITileStructure central = ((TileHatch) tile).getCentralTE();
-		if (central == null || !(central instanceof TileFarmPlain))
-			return false;
-
-		return !((TileFarmPlain) central).hasGermlingsPercent(threshold);
+		TileFarmHatch tileHatch = (TileFarmHatch) tile;
+		IInventory germlingsInventory = tileHatch.getMultiblockLogic().getController().getFarmInventory().getGermlingsInventory();
+		return !InventoryUtil.containsPercent(germlingsInventory, threshold);
 	}
 }

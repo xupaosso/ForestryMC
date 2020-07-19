@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -13,6 +13,8 @@ package forestry.core.inventory.wrappers;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+
+import forestry.core.utils.InventoryUtil;
 
 /**
  * Creates a deep copy of an existing IInventory.
@@ -30,12 +32,7 @@ public class InventoryCopy implements IInventory {
 	public InventoryCopy(IInventory orignal) {
 		this.orignal = orignal;
 		contents = new ItemStack[orignal.getSizeInventory()];
-		for (int i = 0; i < contents.length; i++) {
-			ItemStack stack = orignal.getStackInSlot(i);
-			if (stack != null) {
-				contents[i] = stack.copy();
-			}
-		}
+		InventoryUtil.deepCopyInventoryContents(orignal, this);
 	}
 
 	@Override

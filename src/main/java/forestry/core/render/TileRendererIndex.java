@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -25,11 +25,12 @@ public class TileRendererIndex {
 		return block.hashCode() + meta;
 	}
 
-	public boolean equals(Object aobj) {
-		if (!(aobj instanceof TileRendererIndex))
+	public boolean equals(Object obj) {
+		if (!(obj instanceof TileRendererIndex)) {
 			return false;
+		}
 
-		TileRendererIndex index = (TileRendererIndex) aobj;
+		TileRendererIndex index = (TileRendererIndex) obj;
 
 		return index.block == block && index.meta == meta;
 	}

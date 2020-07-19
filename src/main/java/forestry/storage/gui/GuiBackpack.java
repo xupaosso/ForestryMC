@@ -4,29 +4,24 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.storage.gui;
 
-import forestry.core.config.Defaults;
-import forestry.core.gadgets.TileForestry;
-import forestry.core.gui.ContainerForestry;
+import net.minecraft.inventory.IInventory;
+
+import forestry.core.config.Constants;
 import forestry.core.gui.GuiForestry;
 
-public class GuiBackpack extends GuiForestry<TileForestry> {
+public class GuiBackpack extends GuiForestry<ContainerBackpack, IInventory> {
 
-	public GuiBackpack(ContainerForestry container) {
-		this(Defaults.TEXTURE_PATH_GUI + "/backpack.png", container);
+	public GuiBackpack(ContainerBackpack container) {
+		this(Constants.TEXTURE_PATH_GUI + "/backpack.png", container);
 	}
 
-	protected GuiBackpack(String texture, ContainerForestry container) {
-		super(texture, container);
-	}
-
-	@Override
-	protected boolean checkHotbarKeys(int key) {
-		return false;
+	protected GuiBackpack(String texture, ContainerBackpack container) {
+		super(texture, container, null);
 	}
 }

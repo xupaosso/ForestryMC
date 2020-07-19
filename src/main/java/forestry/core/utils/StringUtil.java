@@ -4,22 +4,31 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.utils;
 
 import java.util.IllegalFormatException;
+
 import net.minecraft.block.Block;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
+
+import forestry.core.proxy.Proxies;
 
 public class StringUtil {
 
 	public static boolean canTranslate(String key) {
 		return StatCollector.canTranslate("for." + key);
+	}
+
+	public static boolean canTranslateTile(String key) {
+		return StatCollector.canTranslate("tile.for." + key);
 	}
 
 	public static String localize(String key) {
@@ -35,8 +44,8 @@ public class StringUtil {
 	}
 
 	/**
-	* Same as localizeAndFormat, only without the "for." prefix. Used for specific items.
-	*/
+	 * Same as localizeAndFormat, only without the "for." prefix. Used for specific items.
+	 */
 	public static String localizeAndFormatRaw(String key, Object... args) {
 		String text = StatCollector.translateToLocal(key).replace("\\n", "\n").replace("@", "%").replace("\\%", "@");
 
@@ -63,27 +72,24 @@ public class StringUtil {
 		return cleanTags(block.getUnlocalizedName());
 	}
 
-	public static String capitalize(String s) {
-		if (s.length() == 0)
-			return s;
-		return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
-	}
-
 	public static String append(String delim, String source, String appendix) {
-		if (source.length() <= 0)
+		if (source.length() <= 0) {
 			return appendix;
+		}
 
-		if (appendix.length() <= 0)
+		if (appendix.length() <= 0) {
 			return source;
+		}
 
 		return source + delim + appendix;
 	}
 
 	public static String readableBoolean(boolean flag, String trueStr, String falseStr) {
-		if (flag)
+		if (flag) {
 			return trueStr;
-		else
+		} else {
 			return falseStr;
+		}
 	}
 
 	public static String floatAsPercent(float val) {
@@ -92,9 +98,22 @@ public class StringUtil {
 
 	public static String line(int length) {
 		StringBuilder line = new StringBuilder();
-		for (int i = 0; i < length; i++)
-			line.append("-");
+		for (int i = 0; i < length; i++) {
+			line.append('-');
+		}
 
 		return line.toString();
+	}
+
+	public static int getLineHeight(int maxWidth, String... strings) {
+		Minecraft minecraft = Proxies.common.getClientInstance();
+		FontRenderer fontRenderer = minecraft.fontRenderer;
+
+		int lineCount = 0;
+		for (String string : strings) {
+			lineCount += fontRenderer.listFormattedStringToWidth(string, maxWidth).size();
+		}
+
+		return lineCount * fontRenderer.FONT_HEIGHT;
 	}
 }

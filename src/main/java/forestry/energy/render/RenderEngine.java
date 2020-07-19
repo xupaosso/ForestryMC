@@ -4,25 +4,29 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.energy.render;
 
-import forestry.core.TemperatureState;
-import forestry.core.config.Defaults;
-import forestry.core.gadgets.Engine;
-import forestry.core.interfaces.IBlockRenderer;
-import forestry.core.proxy.Proxies;
-import forestry.core.utils.ForestryResource;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
+
 import net.minecraftforge.common.util.ForgeDirection;
+
 import org.lwjgl.opengl.GL11;
+
+import forestry.core.config.Constants;
+import forestry.core.proxy.Proxies;
+import forestry.core.render.ForestryResource;
+import forestry.core.render.IBlockRenderer;
+import forestry.core.tiles.TemperatureState;
+import forestry.core.tiles.TileEngine;
+import forestry.core.utils.Log;
 
 public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRenderer {
 
@@ -33,7 +37,7 @@ public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRen
 	private final ModelRenderer piston;
 	private final ModelRenderer extension;
 
-	private static enum Textures {
+	private enum Textures {
 
 		BASE, PISTON, EXTENSION, TRUNK_HIGHEST, TRUNK_HIGHER, TRUNK_HIGH, TRUNK_MEDIUM, TRUNK_LOW
 	}
@@ -79,29 +83,30 @@ public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRen
 	public RenderEngine(String baseTexture) {
 		this();
 
-		textures = new ResourceLocation[] {
+		textures = new ResourceLocation[]{
 				new ForestryResource(baseTexture + "base.png"),
 				new ForestryResource(baseTexture + "piston.png"),
 				new ForestryResource(baseTexture + "extension.png"),
-				new ForestryResource(Defaults.TEXTURE_PATH_BLOCKS + "/engine_trunk_highest.png"),
-				new ForestryResource(Defaults.TEXTURE_PATH_BLOCKS + "/engine_trunk_higher.png"),
-				new ForestryResource(Defaults.TEXTURE_PATH_BLOCKS + "/engine_trunk_high.png"),
-				new ForestryResource(Defaults.TEXTURE_PATH_BLOCKS + "/engine_trunk_medium.png"),
-				new ForestryResource(Defaults.TEXTURE_PATH_BLOCKS + "/engine_trunk_low.png"), };
+				new ForestryResource(Constants.TEXTURE_PATH_BLOCKS + "/engine_trunk_highest.png"),
+				new ForestryResource(Constants.TEXTURE_PATH_BLOCKS + "/engine_trunk_higher.png"),
+				new ForestryResource(Constants.TEXTURE_PATH_BLOCKS + "/engine_trunk_high.png"),
+				new ForestryResource(Constants.TEXTURE_PATH_BLOCKS + "/engine_trunk_medium.png"),
+				new ForestryResource(Constants.TEXTURE_PATH_BLOCKS + "/engine_trunk_low.png"),};
 	}
 
 	@Override
-	public void inventoryRender(double x, double y, double z, float f, float f1) {
+	public void inventoryRender(double x, double y, double z) {
 		render(TemperatureState.COOL, 0.25F, ForgeDirection.UP, x, y, z);
 	}
 
 	@Override
 	public void renderTileEntityAt(TileEntity tile, double d, double d1, double d2, float f) {
-
-		Engine engine = (Engine) tile;
-
-		if (engine != null)
-			render(engine.getTemperatureState(), engine.progress, engine.getOrientation(), d, d1, d2);
+		if (tile instanceof TileEngine) {
+			TileEngine tileEngine = (TileEngine) tile;
+			render(tileEngine.getTemperatureState(), tileEngine.progress, tileEngine.getOrientation(), d, d1, d2);
+		} else {
+			Log.severe("Tried to render a tile entity that is not an engine: " + tile);
+		}
 	}
 
 	private void render(TemperatureState state, float progress, ForgeDirection orientation, double x, double y, double z) {
@@ -117,27 +122,28 @@ public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRen
 
 		float step;
 
-		if (progress > 0.5)
+		if (progress > 0.5) {
 			step = 5.99F - (progress - 0.5F) * 2F * 5.99F;
-		else
+		} else {
 			step = progress * 2F * 5.99F;
+		}
 
 		float tfactor = step / 16;
 
-		float[] angle = { 0, 0, 0 };
-		float[] translate = { orientation.offsetX, orientation.offsetY, orientation.offsetZ };
+		float[] angle = {0, 0, 0};
+		float[] translate = {orientation.offsetX, orientation.offsetY, orientation.offsetZ};
 
 		switch (orientation) {
-		case EAST:
-		case WEST:
-		case DOWN:
-			angle[2] = angleMap[orientation.ordinal()];
-			break;
-		case SOUTH:
-		case NORTH:
-		default:
-			angle[0] = angleMap[orientation.ordinal()];
-			break;
+			case EAST:
+			case WEST:
+			case DOWN:
+				angle[2] = angleMap[orientation.ordinal()];
+				break;
+			case SOUTH:
+			case NORTH:
+			default:
+				angle[0] = angleMap[orientation.ordinal()];
+				break;
 		}
 
 		boiler.rotateAngleX = angle[0];
@@ -158,10 +164,10 @@ public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRen
 
 		float factor = (float) (1.0 / 16.0);
 
-		Proxies.common.bindTexture(textures[Textures.BASE.ordinal()]);
+		Proxies.render.bindTexture(textures[Textures.BASE.ordinal()]);
 		boiler.render(factor);
 
-		Proxies.common.bindTexture(textures[Textures.PISTON.ordinal()]);
+		Proxies.render.bindTexture(textures[Textures.PISTON.ordinal()]);
 		GL11.glTranslatef(translate[0] * tfactor, translate[1] * tfactor, translate[2] * tfactor);
 		piston.render(factor);
 		GL11.glTranslatef(-translate[0] * tfactor, -translate[1] * tfactor, -translate[2] * tfactor);
@@ -169,33 +175,35 @@ public class RenderEngine extends TileEntitySpecialRenderer implements IBlockRen
 		ResourceLocation texture;
 
 		switch (state) {
-		case OVERHEATING:
-			texture = textures[Textures.TRUNK_HIGHEST.ordinal()];
-			break;
-		case RUNNING_HOT:
-			texture = textures[Textures.TRUNK_HIGHER.ordinal()];
-			break;
-		case OPERATING_TEMPERATURE:
-			texture = textures[Textures.TRUNK_HIGH.ordinal()];
-			break;
-		case WARMED_UP:
-			texture = textures[Textures.TRUNK_MEDIUM.ordinal()];
-			break;
-		case COOL:
-		default:
-			texture = textures[Textures.TRUNK_LOW.ordinal()];
-			break;
+			case OVERHEATING:
+				texture = textures[Textures.TRUNK_HIGHEST.ordinal()];
+				break;
+			case RUNNING_HOT:
+				texture = textures[Textures.TRUNK_HIGHER.ordinal()];
+				break;
+			case OPERATING_TEMPERATURE:
+				texture = textures[Textures.TRUNK_HIGH.ordinal()];
+				break;
+			case WARMED_UP:
+				texture = textures[Textures.TRUNK_MEDIUM.ordinal()];
+				break;
+			case COOL:
+			default:
+				texture = textures[Textures.TRUNK_LOW.ordinal()];
+				break;
 
 		}
-		Proxies.common.bindTexture(texture);
+		Proxies.render.bindTexture(texture);
 		trunk.render(factor);
 
-		Proxies.common.bindTexture(textures[Textures.EXTENSION.ordinal()]);
+		Proxies.render.bindTexture(textures[Textures.EXTENSION.ordinal()]);
 		float chamberf = 2F / 16F;
 
-		for (int i = 0; i <= step + 2; i += 2) {
-			extension.render(factor);
-			GL11.glTranslatef(translate[0] * chamberf, translate[1] * chamberf, translate[2] * chamberf);
+		if (step > 0) {
+			for (int i = 0; i <= step + 2; i += 2) {
+				extension.render(factor);
+				GL11.glTranslatef(translate[0] * chamberf, translate[1] * chamberf, translate[2] * chamberf);
+			}
 		}
 
 		GL11.glPopAttrib();

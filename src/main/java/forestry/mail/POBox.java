@@ -4,21 +4,23 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail;
 
-import forestry.api.mail.ILetter;
-import forestry.api.mail.IMailAddress;
-import forestry.api.mail.PostManager;
-import forestry.core.inventory.InventoryAdapter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.WorldSavedData;
+
+import forestry.api.mail.ILetter;
+import forestry.api.mail.IMailAddress;
+import forestry.api.mail.PostManager;
+import forestry.core.inventory.InventoryAdapter;
+import forestry.core.utils.InventoryUtil;
 
 public class POBox extends WorldSavedData implements IInventory {
 
@@ -26,7 +28,7 @@ public class POBox extends WorldSavedData implements IInventory {
 	public static final short SLOT_SIZE = 84;
 
 	private IMailAddress address;
-	private final InventoryAdapter letters = new InventoryAdapter(SLOT_SIZE, "Letters");
+	private final InventoryAdapter letters = new InventoryAdapter(SLOT_SIZE, "Letters").disableAutomation();
 
 	public POBox(IMailAddress address) {
 		super(SAVE_NAME + address);
@@ -69,20 +71,23 @@ public class POBox extends WorldSavedData implements IInventory {
 		letterstack.setTagCompound(nbttagcompound);
 
 		this.markDirty();
-		return this.letters.tryAddStack(letterstack, true);
+
+		return InventoryUtil.tryAddStack(letters, letterstack, true);
 	}
 
 	public POBoxInfo getPOBoxInfo() {
 		int playerLetters = 0;
 		int tradeLetters = 0;
 		for (int i = 0; i < letters.getSizeInventory(); i++) {
-			if (letters.getStackInSlot(i) == null)
+			if (letters.getStackInSlot(i) == null) {
 				continue;
+			}
 			ILetter letter = new Letter(letters.getStackInSlot(i).getTagCompound());
-			if (letter.getSender().isPlayer())
+			if (letter.getSender().isPlayer()) {
 				playerLetters++;
-			else
+			} else {
 				tradeLetters++;
+			}
 		}
 
 		return new POBoxInfo(playerLetters, tradeLetters);
@@ -151,7 +156,7 @@ public class POBox extends WorldSavedData implements IInventory {
 
 	@Override
 	public boolean isItemValidForSlot(int i, ItemStack itemstack) {
-		return true;
+		return letters.isItemValidForSlot(i, itemstack);
 	}
 
 }

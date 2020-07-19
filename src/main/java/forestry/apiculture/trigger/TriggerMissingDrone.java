@@ -4,19 +4,22 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.apiculture.trigger;
 
+import net.minecraft.tileentity.TileEntity;
+
+import net.minecraftforge.common.util.ForgeDirection;
+
+import forestry.api.core.IErrorLogicSource;
+import forestry.core.errors.EnumErrorCode;
+import forestry.core.triggers.Trigger;
+
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
-import forestry.core.EnumErrorCode;
-import forestry.core.interfaces.IErrorSource;
-import forestry.core.triggers.Trigger;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
 
 public class TriggerMissingDrone extends Trigger {
 
@@ -30,11 +33,12 @@ public class TriggerMissingDrone extends Trigger {
 	@Override
 	public boolean isTriggerActive(TileEntity tile, ForgeDirection side, IStatementContainer source, IStatementParameter[] parameters) {
 
-		if (!(tile instanceof IErrorSource))
+		if (!(tile instanceof IErrorLogicSource)) {
 			return false;
+		}
 
-		return ((IErrorSource) tile).getErrorState() == EnumErrorCode.NODRONE;
-
+		IErrorLogicSource apiary = (IErrorLogicSource) tile;
+		return apiary.getErrorLogic().contains(EnumErrorCode.NO_DRONE);
 	}
 
 }

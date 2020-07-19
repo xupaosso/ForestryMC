@@ -4,16 +4,17 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.circuits;
 
+import java.util.List;
+
 import forestry.api.circuits.ChipsetManager;
 import forestry.api.circuits.ICircuit;
 import forestry.core.utils.StringUtil;
-import java.util.List;
 
 public abstract class Circuit implements ICircuit {
 
@@ -21,7 +22,7 @@ public abstract class Circuit implements ICircuit {
 	private final boolean requiresDiscovery;
 	private int limit = 1;
 
-	public Circuit(String uid, boolean requiresDiscovery) {
+	protected Circuit(String uid, boolean requiresDiscovery) {
 		this.uid = uid;
 		this.requiresDiscovery = requiresDiscovery;
 
@@ -60,15 +61,15 @@ public abstract class Circuit implements ICircuit {
 		while (true) {
 			String unlocalizedDescription = getName() + ".description." + i;
 			String description = StringUtil.localize(unlocalizedDescription);
-			if (description.endsWith(unlocalizedDescription))
+			if (description.endsWith(unlocalizedDescription)) {
 				break;
+			}
 			list.add(" - " + description);
 			i++;
 		}
 	}
 
 	public static ICircuit energyElectricChoke1;
-	public static ICircuit energyFireDampener1;
 	public static ICircuit energyElectricEfficiency1;
 	public static ICircuit energyElectricBoost1;
 	public static ICircuit energyElectricBoost2;
@@ -95,4 +96,9 @@ public abstract class Circuit implements ICircuit {
 
 	public static ICircuit farmOrchardManual;
 	public static ICircuit farmRubberManual;
+	public static ICircuit farmEnderManaged;
+
+	public static ICircuit machineSpeedUpgrade1;
+	public static ICircuit machineSpeedUpgrade2;
+	public static ICircuit machineEfficiencyUpgrade1;
 }

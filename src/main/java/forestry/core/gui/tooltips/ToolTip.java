@@ -11,7 +11,7 @@
 package forestry.core.gui.tooltips;
 
 import com.google.common.collect.ForwardingList;
-import forestry.core.utils.StringUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +20,7 @@ import java.util.List;
  */
 public class ToolTip extends ForwardingList<ToolTipLine> {
 
-	private final List<ToolTipLine> delegate = new ArrayList<ToolTipLine>();
+	private final List<ToolTipLine> delegate = new ArrayList<>();
 	private final long delay;
 	private long mouseOverStart;
 
@@ -44,54 +44,37 @@ public class ToolTip extends ForwardingList<ToolTipLine> {
 	public boolean add(List lines) {
 		boolean changed = false;
 		for (Object line : lines) {
-			if (line instanceof String)
+			if (line instanceof String) {
 				changed |= add((String) line);
+			}
 		}
 		return changed;
 	}
 
 	public void onTick(boolean mouseOver) {
-		if (delay == 0)
+		if (delay == 0) {
 			return;
+		}
 		if (mouseOver) {
-			if (mouseOverStart == 0)
+			if (mouseOverStart == 0) {
 				mouseOverStart = System.currentTimeMillis();
-		} else
+			}
+		} else {
 			mouseOverStart = 0;
+		}
 	}
 
 	public boolean isReady() {
-		if (delay == 0)
+		if (delay == 0) {
 			return true;
-		if (mouseOverStart == 0)
+		}
+		if (mouseOverStart == 0) {
 			return false;
+		}
 		return System.currentTimeMillis() - mouseOverStart >= delay;
 	}
 
 	public void refresh() {
-	}
-
-	public List<String> convertToStrings() {
-		List<String> tips = new ArrayList<String>(size());
-		for (ToolTipLine line : this) {
-			tips.add(line.toString());
-		}
-		return tips;
-	}
-
-	public static ToolTip buildToolTip(String tipTag, String... vars) {
-		ToolTip toolTip = new ToolTip(750);
-		String text = StringUtil.localize(tipTag);
-		for (String var : vars) {
-			String[] pair = var.split("=");
-			text = text.replace(pair[0], pair[1]);
-		}
-		String[] tips = text.split("\n");
-		for (String tip : tips) {
-			tip = tip.trim();
-			toolTip.add(new ToolTipLine(tip));
-		}
-		return toolTip;
 	}
 
 }

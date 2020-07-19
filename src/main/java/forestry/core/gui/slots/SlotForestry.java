@@ -4,40 +4,34 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.gui.slots;
 
-import forestry.core.gui.tooltips.IToolTipProvider;
-import forestry.core.gui.tooltips.ToolTip;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 
-public class SlotForestry extends Slot implements IToolTipProvider{
+import forestry.core.gui.tooltips.IToolTipProvider;
+import forestry.core.gui.tooltips.ToolTip;
 
-	protected boolean isPhantom;
-	protected boolean isInfinite;
-	protected boolean canAdjustPhantom = true;
-	protected boolean canShift = true;
-	protected int stackLimit;
+public class SlotForestry extends Slot implements IToolTipProvider {
+
+	private boolean isPhantom;
+	private boolean canAdjustPhantom = true;
+	private boolean canShift = true;
+	private int stackLimit;
 	private ToolTip toolTips;
 
 	public SlotForestry(IInventory inventory, int slotIndex, int xPos, int yPos) {
-		this(inventory, slotIndex, xPos, yPos, -1);
-	}
-
-	public SlotForestry(IInventory inventory, int slotIndex, int xPos, int yPos, int stackLimit) {
 		super(inventory, slotIndex, xPos, yPos);
-		this.stackLimit = stackLimit;
-	}
-
-	public SlotForestry setInfinite() {
-		this.isInfinite = true;
-		return this;
+		if (inventory == null) {
+			throw new IllegalArgumentException("Inventory must not be null");
+		}
+		this.stackLimit = -1;
 	}
 
 	public SlotForestry setPhantom() {
@@ -52,17 +46,13 @@ public class SlotForestry extends Slot implements IToolTipProvider{
 
 	@Override
 	public void putStack(ItemStack itemStack) {
-		if (!isPhantom() || canAdjustPhantom())
+		if (!isPhantom() || canAdjustPhantom()) {
 			super.putStack(itemStack);
+		}
 	}
 
 	public SlotForestry setCanAdjustPhantom(boolean canAdjust) {
 		this.canAdjustPhantom = canAdjust;
-		return this;
-	}
-
-	public SlotForestry setCanShift(boolean canShift) {
-		this.canShift = canShift;
 		return this;
 	}
 
@@ -90,24 +80,11 @@ public class SlotForestry extends Slot implements IToolTipProvider{
 
 	@Override
 	public int getSlotStackLimit() {
-		if (stackLimit < 0)
+		if (stackLimit < 0) {
 			return super.getSlotStackLimit();
-		else
+		} else {
 			return stackLimit;
-	}
-
-	@Override
-	public ItemStack decrStackSize(int i) {
-		if (!isInfinite)
-			return super.decrStackSize(i);
-
-		ItemStack stack = inventory.getStackInSlot(getSlotIndex());
-		if (stack == null)
-			return null;
-
-		ItemStack result = stack.copy();
-		result.stackSize = i;
-		return result;
+		}
 	}
 
 	/**
@@ -119,9 +96,11 @@ public class SlotForestry extends Slot implements IToolTipProvider{
 
 	/**
 	 * @return the toolTips
+	 * @param mouseX
+	 * @param mouseY
 	 */
 	@Override
-	public ToolTip getToolTip() {
+	public ToolTip getToolTip(int mouseX, int mouseY) {
 		return toolTips;
 	}
 
@@ -131,7 +110,7 @@ public class SlotForestry extends Slot implements IToolTipProvider{
 	}
 
 	@Override
-	public boolean isMouseOver(int mouseX, int mouseY) {		
+	public boolean isMouseOver(int mouseX, int mouseY) {
 		return mouseX >= xDisplayPosition && mouseX <= xDisplayPosition + 16 && mouseY >= yDisplayPosition && mouseY <= yDisplayPosition + 16;
 	}
 }

@@ -4,35 +4,33 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail.gui;
 
-import forestry.core.config.Defaults;
-import forestry.core.gui.GuiForestry;
-import forestry.core.utils.StringUtil;
-import forestry.mail.gadgets.MachineTrader;
-import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.entity.player.InventoryPlayer;
 import org.apache.commons.lang3.StringUtils;
+
+import net.minecraft.client.gui.GuiTextField;
+
 import org.lwjgl.input.Keyboard;
 
-public class GuiTradeName extends GuiForestry<MachineTrader> {
+import forestry.core.config.Constants;
+import forestry.core.gui.GuiForestry;
+import forestry.core.proxy.Proxies;
+import forestry.core.utils.StringUtil;
+import forestry.mail.network.packets.PacketTraderAddressRequest;
+import forestry.mail.tiles.TileTrader;
+
+public class GuiTradeName extends GuiForestry<ContainerTradeName, TileTrader> {
 
 	private GuiTextField addressNameField;
 
-	private boolean addressNameFocus;
-
-	private final ContainerTradeName container;
-
-	public GuiTradeName(InventoryPlayer inventoryplayer, MachineTrader tile) {
-		super(Defaults.TEXTURE_PATH_GUI + "/tradername.png", new ContainerTradeName(inventoryplayer, tile), tile);
+	public GuiTradeName(TileTrader tile) {
+		super(Constants.TEXTURE_PATH_GUI + "/tradername.png", new ContainerTradeName(tile), tile);
 		this.xSize = 176;
 		this.ySize = 90;
-
-		this.container = (ContainerTradeName) inventorySlots;
 	}
 
 	@Override
@@ -40,8 +38,9 @@ public class GuiTradeName extends GuiForestry<MachineTrader> {
 		super.initGui();
 
 		addressNameField = new GuiTextField(this.fontRendererObj, guiLeft + 44, guiTop + 39, 90, 14);
-		if (container.getAddress() != null)
+		if (container.getAddress() != null) {
 			addressNameField.setText(container.getAddress().getName());
+		}
 		addressNameField.setFocused(true);
 	}
 
@@ -51,8 +50,7 @@ public class GuiTradeName extends GuiForestry<MachineTrader> {
 		// Set focus or enter text into address
 		if (addressNameField.isFocused()) {
 			if (eventKey == Keyboard.KEY_RETURN) {
-				addressNameFocus = true;
-				addressNameField.setFocused(false);
+				setAddress();
 			} else {
 				addressNameField.textboxKeyTyped(eventCharacter, eventKey);
 			}
@@ -70,35 +68,28 @@ public class GuiTradeName extends GuiForestry<MachineTrader> {
 
 	@Override
 	protected void drawGuiContainerBackgroundLayer(float var1, int var2, int var3) {
-		// Close gui screen if we linked up.
-		if (container.machine.isLinked()) {
-			this.mc.displayGuiScreen(null);
-			this.mc.setIngameFocus();
-		}
-
-		// Check for focus changes
-		if (addressNameFocus && !addressNameField.isFocused())
-			this.setAddress();
-		addressNameFocus = addressNameField.isFocused();
-
 		super.drawGuiContainerBackgroundLayer(var1, var2, var3);
 
 		String prompt = StringUtil.localize("gui.mail.nametrader");
-		fontRendererObj.drawString(prompt, guiLeft + this.getCenteredOffset(prompt), guiTop + 16, fontColor.get("gui.mail.text"));
+		textLayout.startPage();
+		textLayout.newLine();
+		textLayout.drawCenteredLine(prompt, 0, fontColor.get("gui.mail.text"));
+		textLayout.endPage();
 		addressNameField.drawTextBox();
-
 	}
 
 	@Override
 	public void onGuiClosed() {
-		setAddress();
 		super.onGuiClosed();
+		setAddress();
 	}
 
 	private void setAddress() {
 		String address = addressNameField.getText();
-		if (StringUtils.isNotBlank(address))
-			container.setAddress(address);
+		if (StringUtils.isNotBlank(address)) {
+			PacketTraderAddressRequest packet = new PacketTraderAddressRequest(inventory, address);
+			Proxies.net.sendToServer(packet);
+		}
 	}
 
 }

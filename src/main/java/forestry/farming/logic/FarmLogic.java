@@ -4,62 +4,45 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.logic;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 
-import net.minecraftforge.common.util.ForgeDirection;
-
+import forestry.api.farming.FarmDirection;
 import forestry.api.farming.IFarmHousing;
 import forestry.api.farming.IFarmLogic;
-import forestry.core.config.Defaults;
-import forestry.core.config.ForestryBlock;
+import forestry.core.config.Constants;
+import forestry.core.entities.EntitySelector;
 import forestry.core.render.SpriteSheet;
-import forestry.core.vect.IVect;
-import forestry.core.vect.Vect;
+import forestry.core.utils.EntityUtil;
+import forestry.core.utils.vect.Vect;
 
 public abstract class FarmLogic implements IFarmLogic {
-
+	private final EntitySelectorFarm entitySelectorFarm = new EntitySelectorFarm(this);
 	protected final IFarmHousing housing;
-
 	protected boolean isManual;
 
-	private static final HashSet<Block> breakable = new HashSet<Block>();
-
-	public FarmLogic(IFarmHousing housing) {
+	protected FarmLogic(IFarmHousing housing) {
 		this.housing = housing;
 	}
 
 	public FarmLogic setManual(boolean flag) {
 		isManual = flag;
 		return this;
-	}
-
-	public boolean canBreakGround(Block block) {
-		if (breakable.isEmpty()) {
-			breakable.add(Blocks.air);
-			breakable.add(Blocks.dirt);
-			breakable.add(Blocks.grass);
-			breakable.add(Blocks.sand);
-			breakable.add(Blocks.farmland);
-			breakable.add(Blocks.mycelium);
-			breakable.add(Blocks.soul_sand);
-			breakable.add(Blocks.water);
-			breakable.add(Blocks.flowing_water);
-			breakable.add(ForestryBlock.soil.block());
-		}
-		return breakable.contains(block);
 	}
 
 	protected World getWorld() {
@@ -71,9 +54,7 @@ public abstract class FarmLogic implements IFarmLogic {
 		return SpriteSheet.ITEMS.getLocation();
 	}
 
-	protected final boolean isAirBlock(IVect position) {
-		return getWorld().isAirBlock(position.getX(), position.getY(), position.getZ());
-	}
+	public abstract boolean isAcceptedWindfall(ItemStack stack);
 
 	protected final boolean isAirBlock(Block block) {
 		return block.getMaterial() == Material.air;
@@ -84,29 +65,59 @@ public abstract class FarmLogic implements IFarmLogic {
 				world.getBlockMetadata(position.x, position.y, position.z) == 0;
 	}
 
-	protected final boolean isWoodBlock(IVect position) {
-		Block block = getBlock(position);
-		return block.isWood(getWorld(), position.getX(), position.getY(), position.getZ());
-	}
-
-	protected final Block getBlock(IVect position) {
-		return getWorld().getBlock(position.getX(), position.getY(), position.getZ());
-	}
-
-	protected final int getBlockMeta(IVect position) {
-		return getWorld().getBlockMetadata(position.getX(), position.getY(), position.getZ());
-	}
-
-	protected final ItemStack getAsItemStack(IVect position) {
-		return new ItemStack(getBlock(position), 1, getBlockMeta(position));
-	}
-
-	protected final Vect translateWithOffset(int x, int y, int z, ForgeDirection direction, int step) {
-		return new Vect(x + direction.offsetX * step, y + direction.offsetY * step, z + direction.offsetZ * step);
+	protected final Vect translateWithOffset(int x, int y, int z, FarmDirection farmDirection, int step) {
+		return new Vect(farmDirection.getForgeDirection()).multiply(step).add(x, y, z);
 	}
 
 	protected final void setBlock(Vect position, Block block, int meta) {
-		getWorld().setBlock(position.x, position.y, position.z, block, meta, Defaults.FLAG_BLOCK_UPDATE | Defaults.FLAG_BLOCK_SYNCH);
+		getWorld().setBlock(position.x, position.y, position.z, block, meta, Constants.FLAG_BLOCK_SYNCH_AND_UPDATE);
 	}
 
+	private AxisAlignedBB getHarvestBox(IFarmHousing farmHousing, boolean toWorldHeight) {
+		Vect coords = new Vect(farmHousing.getCoords());
+		Vect area = new Vect(farmHousing.getArea());
+		Vect offset = new Vect(farmHousing.getOffset());
+
+		Vect min = coords.add(offset);
+		Vect max = min.add(area);
+
+		int maxY = max.y;
+		if (toWorldHeight) {
+			maxY = getWorld().getHeight();
+		}
+
+		return AxisAlignedBB.getBoundingBox(min.x, min.y, min.z, max.x, maxY, max.z);
+	}
+
+	protected List<ItemStack> collectEntityItems(boolean toWorldHeight) {
+		AxisAlignedBB harvestBox = getHarvestBox(housing, toWorldHeight);
+
+		List<EntityItem> entityItems = EntityUtil.selectEntitiesWithinAABB(housing.getWorld(), entitySelectorFarm, harvestBox);
+		List<ItemStack> stacks = new ArrayList<>();
+		for (EntityItem entity : entityItems) {
+			ItemStack contained = entity.getEntityItem();
+			stacks.add(contained.copy());
+			entity.setDead();
+		}
+		return stacks;
+	}
+
+	private static class EntitySelectorFarm extends EntitySelector<EntityItem> {
+		private final FarmLogic farmLogic;
+
+		public EntitySelectorFarm(FarmLogic farmLogic) {
+			super(EntityItem.class);
+			this.farmLogic = farmLogic;
+		}
+
+		@Override
+		protected boolean isEntityApplicableTyped(EntityItem entity) {
+			if (entity.isDead) {
+				return false;
+			}
+
+			ItemStack contained = entity.getEntityItem();
+			return farmLogic.isAcceptedGermling(contained) || farmLogic.isAcceptedWindfall(contained);
+		}
+	}
 }

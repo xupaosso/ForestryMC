@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -12,23 +12,13 @@ package forestry.core.items;
 
 import forestry.api.core.IToolScoop;
 import forestry.api.core.Tabs;
-import forestry.core.config.ForestryBlock;
-import net.minecraft.block.Block;
 
 public class ItemScoop extends ItemForestryTool implements IToolScoop {
-
 	public ItemScoop() {
-		super(new Block[]{ ForestryBlock.beehives.block()}, null);
-		this.maxStackSize = 1;
-		efficiencyOnProperMaterial = 4.0F;
+		super(null);
+		setEfficiencyOnProperMaterial(4.0f);
 		setMaxDamage(10);
 		setCreativeTab(Tabs.tabApiculture);
 		setMaxStackSize(1);
 	}
-
-	@Override
-	public boolean isFull3D() {
-		return true;
-	}
-
 }

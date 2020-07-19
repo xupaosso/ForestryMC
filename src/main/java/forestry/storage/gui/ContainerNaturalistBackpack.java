@@ -4,80 +4,31 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.storage.gui;
 
-import forestry.api.genetics.ISpeciesRoot;
-import forestry.core.gui.ContainerItemInventory;
-import forestry.core.gui.IGuiSelectable;
-import forestry.core.gui.slots.SlotCustom;
-import forestry.core.network.PacketUpdate;
-import forestry.core.proxy.Proxies;
-import forestry.storage.GuiHandlerStorage.PagedInventory;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.item.ItemStack;
+import net.minecraft.entity.player.EntityPlayerMP;
 
-public class ContainerNaturalistBackpack extends ContainerItemInventory implements IGuiSelectable {
+import forestry.core.gui.ContainerItemInventory;
+import forestry.core.gui.ContainerNaturalistInventory;
+import forestry.core.gui.IGuiSelectable;
+import forestry.core.network.packets.PacketGuiSelectRequest;
+import forestry.storage.inventory.ItemInventoryBackpackPaged;
 
-	private final PagedInventory inv;
-	private final ISpeciesRoot speciesRoot;
+public class ContainerNaturalistBackpack extends ContainerItemInventory<ItemInventoryBackpackPaged> implements IGuiSelectable {
 
-	public ContainerNaturalistBackpack(ISpeciesRoot speciesRoot, InventoryPlayer player, PagedInventory inventory, int page, int pageSize) {
-		super(inventory, player.player);
+	public ContainerNaturalistBackpack(EntityPlayer player, ItemInventoryBackpackPaged inventory, int selectedPage) {
+		super(inventory, player.inventory, 18, 120);
 
-		this.inv = inventory;
-		this.speciesRoot = speciesRoot;
-
-		// Inventory
-		for (int x = 0; x < 5; x++) {
-			for (int y = 0; y < 5; y++) {
-				addSlotToContainer(new SlotCustom(inventory, y + page * pageSize + x * 5, 100 + y * 18, 21 + x * 18, speciesRoot));
-			}
-		}
-
-		// Player inventory
-		for (int i1 = 0; i1 < 3; i1++) {
-			for (int l1 = 0; l1 < 9; l1++) {
-				addSecuredSlot(player, l1 + i1 * 9 + 9, 18 + l1 * 18, 120 + i1 * 18);
-			}
-		}
-		// Player hotbar
-		for (int j1 = 0; j1 < 9; j1++) {
-			addSecuredSlot(player, j1, 18 + j1 * 18, 178);
-		}
+		ContainerNaturalistInventory.addInventory(this, inventory, selectedPage);
 	}
 
 	@Override
-	public void purgeBag(EntityPlayer player) {
-		for (int i = 0; i < inventory.getSizeInventory(); i++) {
-			ItemStack stack = inventory.getStackInSlot(i);
-			if (stack == null)
-				continue;
-
-			if (speciesRoot.isMember(stack))
-				continue;
-
-			Proxies.common.dropItemPlayer(player, stack);
-			inventory.setInventorySlotContents(i, null);
-		}
-	}
-
-	@Override
-	protected boolean isAcceptedItem(EntityPlayer player, ItemStack stack) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void handleSelectionChange(EntityPlayer player, PacketUpdate packet) {
-		inv.flipPage(player, packet.payload.intPayload[0]);
-	}
-
-	@Override
-	public void setSelection(PacketUpdate packet) {
+	public void handleSelectionRequest(EntityPlayerMP player, PacketGuiSelectRequest packet) {
+		inventory.flipPage(player, (short) packet.getPrimaryIndex());
 	}
 }

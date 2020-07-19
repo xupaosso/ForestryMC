@@ -4,11 +4,18 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.arboriculture.genetics;
+
+import java.util.EnumSet;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
+import net.minecraftforge.common.EnumPlantType;
 
 import forestry.api.arboriculture.EnumTreeChromosome;
 import forestry.api.arboriculture.IAlleleFruit;
@@ -18,20 +25,14 @@ import forestry.api.arboriculture.IAlleleTreeSpecies;
 import forestry.api.arboriculture.IFruitProvider;
 import forestry.api.arboriculture.IGrowthProvider;
 import forestry.api.arboriculture.ITreeGenome;
-import forestry.api.genetics.IAllele;
+import forestry.api.arboriculture.TreeManager;
 import forestry.api.genetics.IAlleleFloat;
 import forestry.api.genetics.IAlleleInteger;
+import forestry.api.genetics.IAlleleSpecies;
 import forestry.api.genetics.IChromosome;
 import forestry.api.genetics.ISpeciesRoot;
-import forestry.core.genetics.Allele;
-import forestry.core.genetics.AllelePlantType;
-import forestry.core.genetics.Chromosome;
 import forestry.core.genetics.Genome;
-import forestry.plugins.PluginArboriculture;
-import java.util.EnumSet;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.common.EnumPlantType;
+import forestry.core.genetics.alleles.AllelePlantType;
 
 public class TreeGenome extends Genome implements ITreeGenome {
 
@@ -45,11 +46,16 @@ public class TreeGenome extends Genome implements ITreeGenome {
 
 	// NBT RETRIEVAL
 	public static IAlleleTreeSpecies getSpecies(ItemStack itemStack) {
-		IAllele speciesAllele = Genome.getActiveAllele(itemStack, EnumTreeChromosome.SPECIES);
-		if (speciesAllele instanceof IAlleleTreeSpecies)
-			return (IAlleleTreeSpecies)speciesAllele;
-		else
+		if (!TreeManager.treeRoot.isMember(itemStack)) {
 			return null;
+		}
+
+		IAlleleSpecies species = getSpeciesDirectly(itemStack);
+		if (species instanceof IAlleleTreeSpecies) {
+			return (IAlleleTreeSpecies) species;
+		}
+
+		return (IAlleleTreeSpecies) getActiveAllele(itemStack, EnumTreeChromosome.SPECIES, TreeManager.treeRoot);
 	}
 
 	@Override
@@ -89,46 +95,17 @@ public class TreeGenome extends Genome implements ITreeGenome {
 
 	@Override
 	public float getSappiness() {
-		// FIXME: Legacy handling.
-		if (getChromosomes()[EnumTreeChromosome.SAPPINESS.ordinal()] == null)
-			getChromosomes()[EnumTreeChromosome.SAPPINESS.ordinal()] = new Chromosome(Allele.sappinessLowest);
-
-		IAllele allele = getActiveAllele(EnumTreeChromosome.SAPPINESS);
-		// FIXME: More legacy handling
-		if (allele instanceof IAlleleFloat)
-			return ((IAlleleFloat) allele).getValue();
-		else {
-			getChromosomes()[EnumTreeChromosome.SAPPINESS.ordinal()] = new Chromosome(Allele.sappinessLowest);
-			return 0.1f;
-		}
+		return ((IAlleleFloat) getActiveAllele(EnumTreeChromosome.SAPPINESS)).getValue();
 	}
 
 	@Override
 	public EnumSet<EnumPlantType> getPlantTypes() {
-		// / FIXME: Needs some legacy handling.
-		if (!(getActiveAllele(EnumTreeChromosome.PLANT) instanceof AllelePlantType))
-			getChromosomes()[EnumTreeChromosome.PLANT.ordinal()] = new Chromosome(Allele.plantTypeNone);
-
 		return ((AllelePlantType) getActiveAllele(EnumTreeChromosome.PLANT)).getPlantTypes();
 	}
 
 	@Override
 	public int getMaturationTime() {
-		if (getChromosomes()[EnumTreeChromosome.MATURATION.ordinal()] == null)
-			getChromosomes()[EnumTreeChromosome.MATURATION.ordinal()] = new Chromosome(Allele.maturationSlowest);
-
 		return ((IAlleleInteger) getActiveAllele(EnumTreeChromosome.MATURATION)).getValue();
-	}
-
-	private IAllele translateGirth(int girth) {
-		switch (girth) {
-		case 2:
-			return Allele.int2;
-		case 3:
-			return Allele.int3;
-		default:
-			return Allele.int1;
-		}
 	}
 
 	@Override
@@ -143,7 +120,7 @@ public class TreeGenome extends Genome implements ITreeGenome {
 
 	@Override
 	public ISpeciesRoot getSpeciesRoot() {
-		return PluginArboriculture.treeInterface;
+		return TreeManager.treeRoot;
 	}
 
 }

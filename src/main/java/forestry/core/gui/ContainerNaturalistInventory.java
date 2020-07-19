@@ -4,73 +4,60 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.gui;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.ItemStack;
+import net.minecraft.inventory.ICrafting;
+import net.minecraft.inventory.IInventory;
 
-import forestry.api.genetics.ISpeciesRoot;
-import forestry.core.gadgets.TileNaturalistChest;
-import forestry.core.gui.slots.SlotCustom;
-import forestry.core.network.PacketUpdate;
-import forestry.core.proxy.Proxies;
+import forestry.core.gui.slots.SlotFilteredInventory;
+import forestry.core.network.packets.PacketGuiSelectRequest;
+import forestry.core.tiles.IFilterSlotDelegate;
+import forestry.core.tiles.TileNaturalistChest;
 
-public class ContainerNaturalistInventory extends ContainerForestry implements IGuiSelectable {
+public class ContainerNaturalistInventory extends ContainerTile<TileNaturalistChest> implements IGuiSelectable {
 
-	private final IPagedInventory inv;
-	private final ISpeciesRoot speciesRoot;
+	public ContainerNaturalistInventory(InventoryPlayer player, TileNaturalistChest tile, int page) {
+		super(tile, player, 18, 120);
 
-	public ContainerNaturalistInventory(ISpeciesRoot speciesRoot, InventoryPlayer player, TileNaturalistChest inventory, int page, int pageSize) {
-		super(inventory);
-		this.inv = inventory;
-		this.speciesRoot = speciesRoot;
-
-		// Inventory
-		for (int x = 0; x < 5; x++) {
-			for (int y = 0; y < 5; y++) {
-				addSlotToContainer(new SlotCustom(inventory, y + page * pageSize + x * 5, 100 + y * 18, 21 + x * 18, speciesRoot));
-			}
-		}
-
-		// Player inventory
-		for (int i1 = 0; i1 < 3; i1++) {
-			for (int l1 = 0; l1 < 9; l1++) {
-				addSlotToContainer(new Slot(player, l1 + i1 * 9 + 9, 18 + l1 * 18, 120 + i1 * 18));
-			}
-		}
-		// Player hotbar
-		for (int j1 = 0; j1 < 9; j1++) {
-			addSlotToContainer(new Slot(player, j1, 18 + j1 * 18, 178));
-		}
+		addInventory(this, tile, page);
 	}
 
-	public void purgeBag(EntityPlayer player) {
-
-		for (int i = 0; i < inv.getSizeInventory(); i++) {
-			ItemStack stack = inv.getStackInSlot(i);
-			if (stack == null)
-				continue;
-
-			if (speciesRoot.isMember(stack))
-				continue;
-
-			Proxies.common.dropItemPlayer(player, stack);
-			inv.setInventorySlotContents(i, null);
+	public static <T extends IInventory & IFilterSlotDelegate> void addInventory(ContainerForestry container, T inventory, int selectedPage) {
+		for (int page = 0; page < 5; page++) {
+			for (int x = 0; x < 5; x++) {
+				for (int y = 0; y < 5; y++) {
+					int slot = y + page * 25 + x * 5;
+					if (page == selectedPage) {
+						container.addSlotToContainer(new SlotFilteredInventory(inventory, slot, 100 + y * 18, 21 + x * 18));
+					} else {
+						container.addSlotToContainer(new SlotFilteredInventory(inventory, slot, -10000, -10000));
+					}
+				}
+			}
 		}
 	}
 
 	@Override
-	public void handleSelectionChange(EntityPlayer player, PacketUpdate packet) {
-		inv.flipPage(player, packet.payload.intPayload[0]);
+	public void handleSelectionRequest(EntityPlayerMP player, PacketGuiSelectRequest packet) {
+		tile.flipPage(player, (short) packet.getPrimaryIndex());
 	}
 
 	@Override
-	public void setSelection(PacketUpdate packet) {
+	public void addCraftingToCrafters(ICrafting p_75132_1_) {
+		super.addCraftingToCrafters(p_75132_1_);
+		tile.increaseNumPlayersUsing();
+	}
+
+	@Override
+	public void onContainerClosed(EntityPlayer player) {
+		super.onContainerClosed(player);
+		tile.decreaseNumPlayersUsing();
 	}
 }

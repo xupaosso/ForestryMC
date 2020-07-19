@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -16,10 +16,10 @@ import net.minecraft.item.ItemStack;
 
 public class SlotLocked extends SlotForestry {
 
-	public SlotLocked(IInventory par1iInventory, int par2, int par3, int par4) {
-		super(par1iInventory, par2, par3, par4);
+	public SlotLocked(IInventory inventory, int slotIndex, int xPos, int yPos) {
+		super(inventory, slotIndex, xPos, yPos);
 		setCanAdjustPhantom(false);
-		setCanShift(false);
+		blockShift();
 		setPhantom();
 	}
 

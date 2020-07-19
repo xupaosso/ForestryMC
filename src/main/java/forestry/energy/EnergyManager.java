@@ -1,29 +1,37 @@
 package forestry.energy;
 
-import cofh.api.energy.EnergyStorage;
-import cofh.api.energy.IEnergyHandler;
-import forestry.core.GameMode;
-import forestry.core.utils.BlockUtil;
+import java.io.IOException;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
+
 import net.minecraftforge.common.util.ForgeDirection;
 
-public class EnergyManager implements IEnergyHandler {
+import forestry.api.core.ForestryAPI;
+import forestry.core.network.DataInputStreamForestry;
+import forestry.core.network.DataOutputStreamForestry;
+import forestry.core.network.IStreamable;
+import forestry.core.tiles.TileEngine;
+import forestry.core.utils.BlockUtil;
+
+import cofh.api.energy.EnergyStorage;
+import cofh.api.energy.IEnergyHandler;
+import cofh.api.energy.IEnergyReceiver;
+
+public class EnergyManager implements IEnergyHandler, IStreamable {
 	private enum EnergyTransferMode {
 		EXTRACT, RECEIVE, BOTH
 	}
 
-	private final int energyPerWork;
 	private final EnergyStorage energyStorage;
 	private EnergyTransferMode mode = EnergyTransferMode.BOTH;
 
-	public EnergyManager(int maxTransfer, int energyPerWork, int capacity) {
-		this.energyPerWork = scaleForDifficulty(energyPerWork);
+	public EnergyManager(int maxTransfer, int capacity) {
 		this.energyStorage = new EnergyStorage(scaleForDifficulty(capacity), scaleForDifficulty(maxTransfer), scaleForDifficulty(maxTransfer));
 	}
 
-	private static int scaleForDifficulty(int energyPerUse) {
-		return Math.round(energyPerUse * GameMode.getGameMode().getFloatSetting("energy.demand.modifier"));
+	public static int scaleForDifficulty(int energyPerUse) {
+		return Math.round(energyPerUse * ForestryAPI.activeMode.getFloatSetting("energy.demand.modifier"));
 	}
 
 	public void setExtractOnly() {
@@ -75,26 +83,40 @@ public class EnergyManager implements IEnergyHandler {
 	}
 
 	/* Packets */
-	public int toPacketInt() {
+	@Override
+	public void writeData(DataOutputStreamForestry data) throws IOException {
+		int energyStored = energyStorage.getEnergyStored();
+		data.writeInt(energyStored);
+	}
+
+	@Override
+	public void readData(DataInputStreamForestry data) throws IOException {
+		int energyStored = data.readInt();
+		energyStorage.setEnergyStored(energyStored);
+	}
+
+	public int toGuiInt() {
 		return energyStorage.getEnergyStored();
 	}
 
-	public void fromPacketInt(int packetInt) {
+	public void fromGuiInt(int packetInt) {
 		energyStorage.setEnergyStored(packetInt);
 	}
 
 	/* IEnergyHandler */
 	@Override
 	public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) {
-		if (!canReceive())
+		if (!canReceive()) {
 			return 0;
+		}
 		return energyStorage.receiveEnergy(maxReceive, simulate);
 	}
 
 	@Override
 	public int extractEnergy(ForgeDirection from, int maxExtract, boolean simulate) {
-		if (!canExtract())
+		if (!canExtract()) {
 			return 0;
+		}
 		return energyStorage.extractEnergy(maxExtract, simulate);
 	}
 
@@ -125,44 +147,59 @@ public class EnergyManager implements IEnergyHandler {
 		return true;
 	}
 
-	public int getEnergyPerWork() {
-		return energyPerWork;
+	/**
+	 * Consumes one work cycle's worth of energy.
+	 *
+	 * @return true if the energy to do work was consumed
+	 */
+	public boolean consumeEnergyToDoWork(int ticksPerWorkCycle, int energyPerWorkCycle) {
+		int energyPerCycle = (int) Math.ceil(energyPerWorkCycle / (float) ticksPerWorkCycle);
+		if (energyStorage.getEnergyStored() < energyPerCycle) {
+			return false;
+		}
+
+		energyStorage.modifyEnergyStored(-energyPerCycle);
+		return true;
 	}
 
 	/**
-	 * Consumes one work cycle's worth of energy.
-	 * @return true if the energy to do work was consumed
+	 * @return whether this can send energy to the target tile
 	 */
-	public boolean consumeEnergyToDoWork() {
-		if (energyStorage.getEnergyStored() < energyPerWork)
-			return false;
-		energyStorage.modifyEnergyStored(-energyPerWork);
-		return true;
+	public boolean canSendEnergy(ForgeDirection orientation, TileEntity tile) {
+		return sendEnergy(orientation, tile, Integer.MAX_VALUE, true) > 0;
 	}
 
 	/**
 	 * Sends as much energy as it can to the tile at orientation.
 	 * For power sources. Ignores canExtract()
+	 *
 	 * @return amount sent
 	 */
 	public int sendEnergy(ForgeDirection orientation, TileEntity tile) {
-		return sendEnergy(orientation, tile, Integer.MAX_VALUE);
+		return sendEnergy(orientation, tile, Integer.MAX_VALUE, false);
 	}
 
 	/**
 	 * Sends amount of energy to the tile at orientation.
 	 * For power sources. Ignores canExtract()
+	 *
 	 * @return amount sent
 	 */
-	public int sendEnergy(ForgeDirection orientation, TileEntity tile, int amount) {
+	public int sendEnergy(ForgeDirection orientation, TileEntity tile, int amount, boolean simulate) {
 		int sent = 0;
-		if (BlockUtil.isRFTile(orientation.getOpposite(), tile)) {
-			IEnergyHandler receptor = (IEnergyHandler) tile;
-
+		if (BlockUtil.isEnergyReceiverOrEngine(orientation.getOpposite(), tile)) {
 			int extractable = energyStorage.extractEnergy(amount, true);
 			if (extractable > 0) {
-				sent = receptor.receiveEnergy(orientation.getOpposite(), extractable, false);
-				energyStorage.extractEnergy(sent, false);
+
+				if (tile instanceof IEnergyReceiver) {
+					IEnergyReceiver receptor = (IEnergyReceiver) tile;
+					sent = receptor.receiveEnergy(orientation.getOpposite(), extractable, simulate);
+				} else if (tile instanceof TileEngine) {
+					TileEngine receptor = (TileEngine) tile;
+					sent = receptor.getEnergyManager().receiveEnergy(orientation.getOpposite(), extractable, simulate);
+				}
+
+				energyStorage.extractEnergy(sent, simulate);
 			}
 		}
 		return sent;

@@ -4,53 +4,41 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.items;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import forestry.core.config.Config;
-import forestry.core.render.TextureManager;
-import forestry.core.utils.StringUtil;
 import java.util.List;
+
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
+import forestry.core.config.Config;
+import forestry.core.render.TextureManager;
+import forestry.core.utils.StringUtil;
+
 public class ItemOverlay extends ItemForestry {
+	public interface IOverlayInfo {
+		String getName();
 
-	public static class OverlayInfo {
+		int getPrimaryColor();
 
-		public final String name;
-		public final int primaryColor;
-		public final int secondaryColor;
-		public boolean isSecret = false;
+		int getSecondaryColor();
 
-		public OverlayInfo(String name, int primaryColor, int secondaryColor) {
-			this.name = name;
-			this.primaryColor = primaryColor;
-			this.secondaryColor = secondaryColor;
-		}
-
-		public OverlayInfo(String name, int primaryColor) {
-			this(name, primaryColor, 0);
-		}
-
-		public OverlayInfo setIsSecret() {
-			isSecret = true;
-			return this;
-		}
+		boolean isSecret();
 	}
 
-	private final OverlayInfo[] overlays;
+	protected final IOverlayInfo[] overlays;
 
-	public ItemOverlay(CreativeTabs tab, OverlayInfo... overlays) {
-		super();
+	public ItemOverlay(CreativeTabs tab, IOverlayInfo... overlays) {
 		setMaxDamage(0);
 		setHasSubtypes(true);
 		setCreativeTab(tab);
@@ -71,9 +59,11 @@ public class ItemOverlay extends ItemForestry {
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Override
 	public void getSubItems(Item item, CreativeTabs par2CreativeTabs, List itemList) {
-		for (int i = 0; i < overlays.length; i++)
-			if (Config.isDebug || !overlays[i].isSecret)
+		for (int i = 0; i < overlays.length; i++) {
+			if (Config.isDebug || !overlays[i].isSecret()) {
 				itemList.add(new ItemStack(this, 1, i));
+			}
+		}
 	}
 
 	/* ICONS */
@@ -85,23 +75,25 @@ public class ItemOverlay extends ItemForestry {
 	@SideOnly(Side.CLIENT)
 	@Override
 	public void registerIcons(IIconRegister register) {
-		primaryIcon = TextureManager.getInstance().registerTex(register, StringUtil.cleanItemName(this) + ".0");
-		if (overlays[0].secondaryColor != 0)
-			secondaryIcon = TextureManager.getInstance().registerTex(register, StringUtil.cleanItemName(this) + ".1");
+		primaryIcon = TextureManager.registerTex(register, StringUtil.cleanItemName(this) + ".0");
+		if (overlays[0].getSecondaryColor() != 0) {
+			secondaryIcon = TextureManager.registerTex(register, StringUtil.cleanItemName(this) + ".1");
+		}
 	}
 
 	@Override
 	@SideOnly(Side.CLIENT)
 	public IIcon getIconFromDamageForRenderPass(int i, int j) {
-		if (j > 0 && overlays[i].secondaryColor != 0)
+		if (j > 0 && overlays[i].getSecondaryColor() != 0) {
 			return secondaryIcon;
-		else
+		} else {
 			return primaryIcon;
+		}
 	}
 
 	@Override
 	public int getRenderPasses(int metadata) {
-		return overlays[metadata].secondaryColor != 0 ? 2 : 1;
+		return overlays[metadata].getSecondaryColor() != 0 ? 2 : 1;
 	}
 
 	@Override
@@ -111,19 +103,20 @@ public class ItemOverlay extends ItemForestry {
 
 	@Override
 	public String getUnlocalizedName(ItemStack stack) {
-		if (stack.getItemDamage() < 0 || stack.getItemDamage() >= overlays.length)
+		if (stack.getItemDamage() < 0 || stack.getItemDamage() >= overlays.length) {
 			return null;
+		}
 
-		return super.getUnlocalizedName(stack) + "." + overlays[stack.getItemDamage()].name;
+		return super.getUnlocalizedName(stack) + "." + overlays[stack.getItemDamage()].getName();
 	}
 
 	@Override
 	public int getColorFromItemStack(ItemStack itemstack, int j) {
-
-		if (j == 0 || overlays[itemstack.getItemDamage()].secondaryColor == 0)
-			return overlays[itemstack.getItemDamage()].primaryColor;
-		else
-			return overlays[itemstack.getItemDamage()].secondaryColor;
+		IOverlayInfo overlayInfo = overlays[itemstack.getItemDamage()];
+		if (j == 0 || overlayInfo.getSecondaryColor() == 0) {
+			return overlayInfo.getPrimaryColor();
+		} else {
+			return overlayInfo.getSecondaryColor();
+		}
 	}
-
 }

@@ -4,58 +4,58 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.lepidopterology.genetics;
 
-import com.mojang.authlib.GameProfile;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import forestry.api.core.IIconProvider;
-import forestry.api.genetics.AlleleManager;
-import forestry.api.genetics.IClassification;
-import forestry.api.genetics.IIndividual;
-import forestry.api.lepidopterology.EnumFlutterType;
-import forestry.api.lepidopterology.IAlleleButterflySpecies;
-import forestry.api.lepidopterology.IButterflyRoot;
-import forestry.core.config.Defaults;
-import forestry.core.genetics.AlleleSpecies;
+import java.awt.Color;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
+
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraftforge.common.BiomeDictionary;
 
-public class AlleleButterflySpecies extends AlleleSpecies implements IAlleleButterflySpecies {
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
-	private final IButterflyRoot root;
+import forestry.api.core.IIconProvider;
+import forestry.api.genetics.IClassification;
+import forestry.api.genetics.IIndividual;
+import forestry.api.lepidopterology.ButterflyManager;
+import forestry.api.lepidopterology.EnumFlutterType;
+import forestry.api.lepidopterology.IAlleleButterflySpeciesCustom;
+import forestry.api.lepidopterology.IButterflyRoot;
+import forestry.core.genetics.alleles.AlleleSpecies;
 
+public class AlleleButterflySpecies extends AlleleSpecies implements IAlleleButterflySpeciesCustom {
 	private final String texture;
-	private final int serumColour;
+	private final Color serumColour;
 	private float rarity = 0.1f;
 	private float flightDistance = 5.0f;
 	private boolean isActualNocturnal = false;
 
 	private final EnumSet<BiomeDictionary.Type> spawnBiomes = EnumSet.noneOf(BiomeDictionary.Type.class);
 
-	private final Map<ItemStack, Float> butterflyLoot = new HashMap<ItemStack, Float>();
-	private final Map<ItemStack, Float> caterpillarLoot = new HashMap<ItemStack, Float>();
+	private final Map<ItemStack, Float> butterflyLoot = new HashMap<>();
+	private final Map<ItemStack, Float> caterpillarLoot = new HashMap<>();
 
-	public AlleleButterflySpecies(String uid, boolean isDominant, String name, IClassification branch, String binomial, int serumColour) {
-		super(uid, isDominant, "butterflies.species." + branch.getParent().getUID().substring((branch.getParent().getLevel().name().toLowerCase(Locale.ENGLISH)).length()+1) + "." + name, branch, binomial);
-		this.root = (IButterflyRoot)AlleleManager.alleleRegistry.getSpeciesRoot("rootButterflies");
+	public AlleleButterflySpecies(String uid, String unlocalizedName, String authority, String unlocalizedDescription, String texturePath, boolean isDominant, IClassification branch, String binomial, Color serumColour) {
+		super(uid, unlocalizedName, authority, unlocalizedDescription, isDominant, branch, binomial);
 		this.serumColour = serumColour;
-		texture = "forestry:" + Defaults.TEXTURE_PATH_ENTITIES + "/butterflies/" + uid + ".png";
+		this.texture = texturePath;
 	}
 
 	@Override
 	public IButterflyRoot getRoot() {
-		return root;
+		return ButterflyManager.butterflyRoot;
 	}
 
 	public AlleleButterflySpecies setRarity(float rarity) {
@@ -68,8 +68,8 @@ public class AlleleButterflySpecies extends AlleleSpecies implements IAlleleButt
 		return this;
 	}
 
-	public AlleleButterflySpecies setNocturnal(boolean isActualNocturnal) {
-		this.isActualNocturnal = isActualNocturnal;
+	public AlleleButterflySpecies setNocturnal() {
+		this.isActualNocturnal = true;
 		return this;
 	}
 
@@ -107,30 +107,36 @@ public class AlleleButterflySpecies extends AlleleSpecies implements IAlleleButt
 	/* RESEARCH */
 	@Override
 	public int getComplexity() {
-		return (int)((1.35f/rarity)*1.5);
+		return (int) ((1.35f / rarity) * 1.5);
 	}
 
 	@Override
 	public float getResearchSuitability(ItemStack itemstack) {
-		if(itemstack == null)
+		if (itemstack == null) {
 			return 0f;
+		}
 
-		if(itemstack.getItem() == Items.glass_bottle)
+		if (itemstack.getItem() == Items.glass_bottle) {
 			return 0.9f;
+		}
 
-		for(ItemStack stack : butterflyLoot.keySet())
-			if(stack.isItemEqual(itemstack))
+		for (ItemStack stack : butterflyLoot.keySet()) {
+			if (stack.isItemEqual(itemstack)) {
 				return 1.0f;
-		for(ItemStack stack : caterpillarLoot.keySet())
-			if(stack.isItemEqual(itemstack))
+			}
+		}
+		for (ItemStack stack : caterpillarLoot.keySet()) {
+			if (stack.isItemEqual(itemstack)) {
 				return 1.0f;
+			}
+		}
 
 		return super.getResearchSuitability(itemstack);
 	}
 
 	@Override
 	public ItemStack[] getResearchBounty(World world, GameProfile researcher, IIndividual individual, int bountyLevel) {
-		return new ItemStack[] { getRoot().getMemberStack(individual.copy(), EnumFlutterType.SERUM.ordinal()) };
+		return new ItemStack[]{getRoot().getMemberStack(individual.copy(), EnumFlutterType.SERUM.ordinal())};
 	}
 
 	/* OTHER */
@@ -166,8 +172,9 @@ public class AlleleButterflySpecies extends AlleleSpecies implements IAlleleButt
 
 	@Override
 	public int getIconColour(int renderPass) {
-		if(renderPass > 0)
+		if (renderPass > 0) {
 			return 0xffffff;
-		return serumColour;
+		}
+		return serumColour.getRGB() & 0xffffff;
 	}
 }

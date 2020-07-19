@@ -6,6 +6,7 @@
 !/gradle/wrapper
 !/src
 !/api
+!/test
 
 # files
 !/.gitignore
@@ -15,8 +16,9 @@
 !/LICENSE.txt
 !/license-header.txt
 !/README.md
-!/application.properties
+!/gradle.properties
 !/build.gradle
 !/build.xml
 !/gradlew
 !/gradlew.bat
+.DS_Store

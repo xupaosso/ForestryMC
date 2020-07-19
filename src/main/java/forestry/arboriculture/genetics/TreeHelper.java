@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -14,9 +14,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -25,6 +27,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.mojang.authlib.GameProfile;
+
+import net.minecraftforge.oredict.OreDictionary;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 
@@ -39,18 +43,16 @@ import forestry.api.arboriculture.ITreeGenome;
 import forestry.api.arboriculture.ITreeMutation;
 import forestry.api.arboriculture.ITreeRoot;
 import forestry.api.arboriculture.ITreekeepingMode;
+import forestry.api.arboriculture.TreeManager;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IChromosomeType;
 import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.IMutation;
-import forestry.arboriculture.gadgets.BlockFruitPod;
-import forestry.arboriculture.gadgets.TileFruitPod;
-import forestry.arboriculture.gadgets.TileLeaves;
-import forestry.arboriculture.gadgets.TileSapling;
-import forestry.core.config.Defaults;
-import forestry.core.config.ForestryBlock;
-import forestry.core.config.ForestryItem;
+import forestry.arboriculture.blocks.BlockFruitPod;
+import forestry.arboriculture.tiles.TileFruitPod;
+import forestry.arboriculture.tiles.TileSapling;
+import forestry.core.config.Constants;
 import forestry.core.genetics.SpeciesRoot;
 import forestry.core.utils.BlockUtil;
 import forestry.plugins.PluginArboriculture;
@@ -58,14 +60,14 @@ import forestry.plugins.PluginArboriculture;
 public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 	public static final String UID = "rootTrees";
-	public static int treeSpeciesCount = -1;
-	public static ITreekeepingMode activeTreekeepingMode;
-	public static final ArrayList<ITree> treeTemplates = new ArrayList<ITree>();
+	private static int treeSpeciesCount = -1;
+	private static ITreekeepingMode activeTreekeepingMode;
+	public static final ArrayList<ITree> treeTemplates = new ArrayList<>();
 
-	private final ArrayList<ITreekeepingMode> treekeepingModes = new ArrayList<ITreekeepingMode>();
+	private final ArrayList<ITreekeepingMode> treekeepingModes = new ArrayList<>();
 
 	public TreeHelper() {
-		setResearchSuitability(new ItemStack(Blocks.sapling, 1, Defaults.WILDCARD), 1.0f);
+		setResearchSuitability(new ItemStack(Blocks.sapling, 1, OreDictionary.WILDCARD_VALUE), 1.0f);
 	}
 
 	@Override
@@ -83,9 +85,11 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 		if (treeSpeciesCount < 0) {
 			treeSpeciesCount = 0;
 			for (Entry<String, IAllele> entry : AlleleManager.alleleRegistry.getRegisteredAlleles().entrySet()) {
-				if (entry.getValue() instanceof IAlleleTreeSpecies)
-					if (((IAlleleTreeSpecies) entry.getValue()).isCounted())
+				if (entry.getValue() instanceof IAlleleTreeSpecies) {
+					if (((IAlleleTreeSpecies) entry.getValue()).isCounted()) {
 						treeSpeciesCount++;
+					}
+				}
 			}
 		}
 
@@ -110,13 +114,17 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 	/* TREE SPECIFIC */
 	@Override
 	public EnumGermlingType getType(ItemStack stack) {
-		if (stack == null)
+		if (stack == null) {
 			return EnumGermlingType.NONE;
+		}
 
-		if (ForestryItem.sapling.isItemEqual(stack))
+		Item item = stack.getItem();
+
+		if (PluginArboriculture.items.sapling == item) {
 			return EnumGermlingType.SAPLING;
-		else if (ForestryItem.pollenFertile.isItemEqual(stack))
+		} else if (PluginArboriculture.items.pollenFertile == item) {
 			return EnumGermlingType.POLLEN;
+		}
 
 		return EnumGermlingType.NONE;
 	}
@@ -124,18 +132,21 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 	@Override
 	public ITree getTree(World world, int x, int y, int z) {
 		TileEntity tile = world.getTileEntity(x, y, z);
-		if (!(tile instanceof TileSapling))
+		if (!(tile instanceof TileSapling)) {
 			return null;
+		}
 
 		return ((TileSapling) tile).getTree();
 	}
 
 	@Override
 	public ITree getMember(ItemStack itemstack) {
-		if (!isMember(itemstack))
+		if (!isMember(itemstack)) {
 			return null;
-		if (itemstack.getTagCompound() == null)
+		}
+		if (itemstack.getTagCompound() == null) {
 			return null;
+		}
 
 		return new Tree(itemstack.getTagCompound());
 	}
@@ -152,17 +163,20 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 	@Override
 	public ItemStack getMemberStack(IIndividual tree, int type) {
+		if (!isMember(tree)) {
+			return null;
+		}
 
 		Item germlingItem;
 		switch (EnumGermlingType.VALUES[type]) {
-		case SAPLING:
-			germlingItem = ForestryItem.sapling.item();
-			break;
-		case POLLEN:
-			germlingItem = ForestryItem.pollenFertile.item();
-			break;
-		default:
-			throw new RuntimeException("Cannot instantiate a tree of type " + type);
+			case SAPLING:
+				germlingItem = PluginArboriculture.items.sapling;
+				break;
+			case POLLEN:
+				germlingItem = PluginArboriculture.items.pollenFertile;
+				break;
+			default:
+				throw new RuntimeException("Cannot instantiate a tree of type " + type);
 		}
 
 		NBTTagCompound nbttagcompound = new NBTTagCompound();
@@ -178,12 +192,15 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 	@Override
 	public boolean plantSapling(World world, ITree tree, GameProfile owner, int x, int y, int z) {
 
-		boolean placed = world.setBlock(x, y, z, ForestryBlock.saplingGE.block(), 0, Defaults.FLAG_BLOCK_SYNCH);
-		if (!placed)
+		boolean placed = world.setBlock(x, y, z, PluginArboriculture.blocks.saplingGE, 0, Constants.FLAG_BLOCK_SYNCH_AND_UPDATE);
+		if (!placed) {
 			return false;
+		}
 
-		if (!ForestryBlock.saplingGE.isBlockEqual(world, x, y, z))
+		Block block = world.getBlock(x, y, z);
+		if (PluginArboriculture.blocks.saplingGE != block) {
 			return false;
+		}
 
 		TileEntity tile = world.getTileEntity(x, y, z);
 		if (!(tile instanceof TileSapling)) {
@@ -194,39 +211,6 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 		TileSapling sapling = (TileSapling) tile;
 		sapling.setTree(tree.copy());
 		sapling.setOwner(owner);
-		world.markBlockForUpdate(x, y, z);
-
-		return true;
-	}
-
-	@Override
-	public boolean setLeaves(World world, IIndividual tree, GameProfile owner, int x, int y, int z) {
-		return setLeaves(world, tree, owner, x, y, z, false);
-	}
-
-	@Override
-	public boolean setLeaves(World world, IIndividual tree, GameProfile owner, int x, int y, int z, boolean decorative) {
-
-		boolean placed = ForestryBlock.leaves.setBlock(world, x, y, z, 0, Defaults.FLAG_BLOCK_SYNCH);
-		if (!placed)
-			return false;
-
-		if (!ForestryBlock.leaves.isBlockEqual(world, x, y, z))
-			return false;
-
-		TileLeaves tileLeaves = new TileLeaves();
-		tileLeaves.setTree((ITree) tree.copy());
-		tileLeaves.setOwner(owner);
-		if (decorative)
-			tileLeaves.setDecorative();
-
-		world.setTileEntity(x, y, z, tileLeaves);
-
-		TileEntity tile = world.getTileEntity(x, y, z);
-		if (!(tile instanceof TileLeaves)) {
-			world.setBlockToAir(x, y, z);
-			return false;
-		}
 
 		return true;
 	}
@@ -235,14 +219,19 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 	public boolean setFruitBlock(World world, IAlleleFruit allele, float sappiness, short[] indices, int x, int y, int z) {
 
 		int direction = BlockUtil.getDirectionalMetadata(world, x, y, z);
-		if (direction < 0)
+		if (direction < 0) {
 			return false;
-		boolean placed = ForestryBlock.pods.setBlock(world, x, y, z, direction, Defaults.FLAG_BLOCK_SYNCH);
-		if (!placed)
-			return false;
+		}
 
-		if (!ForestryBlock.pods.isBlockEqual(world, x, y, z))
+		boolean placed = world.setBlock(x, y, z, PluginArboriculture.blocks.pods, direction, Constants.FLAG_BLOCK_SYNCH_AND_UPDATE);
+		if (!placed) {
 			return false;
+		}
+
+		Block block = world.getBlock(x, y, z);
+		if (PluginArboriculture.blocks.pods != block) {
+			return false;
+		}
 
 		TileFruitPod pod = BlockFruitPod.getPodTile(world, x, y, z);
 		if (pod == null) {
@@ -283,9 +272,12 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 		// Create a tracker if there is none yet.
 		if (tracker == null) {
-			tracker = new ArboristTracker(filename, player);
+			tracker = new ArboristTracker(filename);
 			world.setItemData(filename, tracker);
 		}
+
+		tracker.setUsername(player);
+		tracker.setWorld(world);
 
 		return tracker;
 	}
@@ -299,14 +291,16 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 	@Override
 	public ITreekeepingMode getTreekeepingMode(World world) {
-		if (activeTreekeepingMode != null)
+		if (activeTreekeepingMode != null) {
 			return activeTreekeepingMode;
+		}
 
 		// No Treekeeping mode yet, item it.
 		IArboristTracker tracker = getBreedingTracker(world, null);
 		String mode = tracker.getModeName();
-		if (mode == null || mode.isEmpty())
+		if (mode == null || mode.isEmpty()) {
 			mode = PluginArboriculture.treekeepingMode;
+		}
 
 		setTreekeepingMode(world, mode);
 		FMLCommonHandler.instance().getFMLLogger().debug("Set Treekeeping mode for a world to " + mode);
@@ -327,9 +321,11 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 	@Override
 	public ITreekeepingMode getTreekeepingMode(String name) {
-		for (ITreekeepingMode mode : treekeepingModes)
-			if (mode.getName().equals(name) || mode.getName().equals(name.toLowerCase(Locale.ENGLISH)))
+		for (ITreekeepingMode mode : treekeepingModes) {
+			if (mode.getName().equals(name) || mode.getName().equals(name.toLowerCase(Locale.ENGLISH))) {
 				return mode;
+			}
+		}
 
 		FMLCommonHandler.instance().getFMLLogger().debug("Failed to find a Treekeeping mode called '%s', reverting to fallback.");
 		return treekeepingModes.get(0);
@@ -344,39 +340,43 @@ public class TreeHelper extends SpeciesRoot implements ITreeRoot {
 
 	@Override
 	public void registerTemplate(String identifier, IAllele[] template) {
-		treeTemplates.add(new Tree(PluginArboriculture.treeInterface.templateAsGenome(template)));
+		treeTemplates.add(new Tree(TreeManager.treeRoot.templateAsGenome(template)));
 		speciesTemplates.put(identifier, template);
 	}
 
 	@Override
 	public IAllele[] getDefaultTemplate() {
-		return TreeTemplates.getDefaultTemplate();
+		return TreeDefinition.Oak.getTemplate();
 	}
 
 	/* MUTATIONS */
-	private static final ArrayList<ITreeMutation> treeMutations = new ArrayList<ITreeMutation>();
+	private static final List<ITreeMutation> treeMutations = new ArrayList<>();
 
 	@Override
-	public ArrayList<ITreeMutation> getMutations(boolean shuffle) {
-		if (shuffle)
+	public List<ITreeMutation> getMutations(boolean shuffle) {
+		if (shuffle) {
 			Collections.shuffle(treeMutations);
+		}
 		return treeMutations;
 	}
 
 	@Override
 	public void registerMutation(IMutation mutation) {
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getTemplate()[0].getUID()))
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getTemplate()[0].getUID())) {
 			return;
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele0().getUID()))
+		}
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele0().getUID())) {
 			return;
-		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele1().getUID()))
+		}
+		if (AlleleManager.alleleRegistry.isBlacklisted(mutation.getAllele1().getUID())) {
 			return;
+		}
 
 		treeMutations.add((ITreeMutation) mutation);
 	}
 
 	/* ILEAFTICKHANDLER */
-	private final LinkedList<ILeafTickHandler> leafTickHandlers = new LinkedList<ILeafTickHandler>();
+	private final LinkedList<ILeafTickHandler> leafTickHandlers = new LinkedList<>();
 
 	@Override
 	public void registerLeafTickHandler(ILeafTickHandler handler) {

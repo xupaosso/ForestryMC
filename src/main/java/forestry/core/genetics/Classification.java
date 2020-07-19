@@ -4,18 +4,19 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.core.genetics;
 
+import java.util.ArrayList;
+import java.util.Locale;
+
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAlleleSpecies;
 import forestry.api.genetics.IClassification;
 import forestry.core.utils.StringUtil;
-import java.util.ArrayList;
-import java.util.Locale;
 
 public class Classification implements IClassification {
 
@@ -25,8 +26,8 @@ public class Classification implements IClassification {
 
 	private IClassification parent;
 
-	private final ArrayList<IAlleleSpecies> members = new ArrayList<IAlleleSpecies>();
-	private final ArrayList<IClassification> groups = new ArrayList<IClassification>();
+	private final ArrayList<IAlleleSpecies> members = new ArrayList<>();
+	private final ArrayList<IClassification> groups = new ArrayList<>();
 
 	public Classification(EnumClassLevel level, String uid, String scientific) {
 		this.level = level;

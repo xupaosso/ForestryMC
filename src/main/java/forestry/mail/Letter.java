@@ -4,29 +4,32 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.mail;
 
-import forestry.api.core.INBTTagable;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
 import forestry.api.mail.ILetter;
 import forestry.api.mail.IMailAddress;
 import forestry.api.mail.IStamps;
 import forestry.core.inventory.InventoryAdapter;
+import forestry.core.utils.InventoryUtil;
 import forestry.core.utils.StringUtil;
-import java.util.List;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import org.apache.commons.lang3.StringUtils;
 
-public class Letter implements ILetter, INBTTagable {
-
-	// CONSTANTS
+public class Letter implements ILetter {
 	public static final short SLOT_ATTACHMENT_1 = 0;
+	public static final short SLOT_ATTACHMENT_COUNT = 18;
 	public static final short SLOT_POSTAGE_1 = 18;
+	public static final short SLOT_POSTAGE_COUNT = 4;
 
 	private boolean isProcessed = false;
 
@@ -38,12 +41,13 @@ public class Letter implements ILetter, INBTTagable {
 
 	public Letter(IMailAddress sender, IMailAddress recipient) {
 		this.sender = sender;
-		this.recipient = new IMailAddress[] { recipient };
+		this.recipient = new IMailAddress[]{recipient};
 	}
 
 	public Letter(NBTTagCompound nbttagcompound) {
-		if (nbttagcompound != null)
+		if (nbttagcompound != null) {
 			readFromNBT(nbttagcompound);
+		}
 	}
 
 	@Override
@@ -54,13 +58,13 @@ public class Letter implements ILetter, INBTTagable {
 
 		int recipientCount = nbttagcompound.getShort("CRC");
 		this.recipient = new MailAddress[recipientCount];
-		for (int i = 0; i < recipientCount; i++)
+		for (int i = 0; i < recipientCount; i++) {
 			this.recipient[i] = MailAddress.loadFromNBT(nbttagcompound.getCompoundTag("RC" + i));
+		}
 
 		this.text = nbttagcompound.getString("TXT");
 
 		this.inventory.readFromNBT(nbttagcompound);
-
 	}
 
 	@Override
@@ -86,41 +90,43 @@ public class Letter implements ILetter, INBTTagable {
 
 	@Override
 	public ItemStack[] getPostage() {
-		return inventory.getStacks(SLOT_POSTAGE_1, 4);
+		return InventoryUtil.getStacks(inventory, SLOT_POSTAGE_1, SLOT_POSTAGE_COUNT);
 	}
 
 	@Override
 	public ItemStack[] getAttachments() {
-		return inventory.getStacks(SLOT_ATTACHMENT_1, 18);
+		return InventoryUtil.getStacks(inventory, SLOT_ATTACHMENT_1, SLOT_ATTACHMENT_COUNT);
 	}
 
 	@Override
 	public int countAttachments() {
-
 		int count = 0;
-		for (ItemStack stack : getAttachments())
-			if (stack != null)
+		for (ItemStack stack : getAttachments()) {
+			if (stack != null) {
 				count++;
+			}
+		}
 
 		return count;
-
 	}
 
 	@Override
 	public void addAttachment(ItemStack itemstack) {
-		inventory.tryAddStack(itemstack, false);
+		InventoryUtil.tryAddStack(inventory, itemstack, false);
 	}
 
 	@Override
 	public void addAttachments(ItemStack[] itemstacks) {
-		for (ItemStack stack : itemstacks)
+		for (ItemStack stack : itemstacks) {
 			addAttachment(stack);
+		}
 	}
 
 	@Override
 	public void invalidatePostage() {
-		for (int i = SLOT_POSTAGE_1; i < SLOT_POSTAGE_1 + 4; i++)
+		for (int i = SLOT_POSTAGE_1; i < SLOT_POSTAGE_1 + SLOT_POSTAGE_COUNT; i++) {
 			inventory.setInventorySlotContents(i, null);
+		}
 	}
 
 	@Override
@@ -146,10 +152,12 @@ public class Letter implements ILetter, INBTTagable {
 		int posted = 0;
 
 		for (ItemStack stamp : getPostage()) {
-			if (stamp == null)
+			if (stamp == null) {
 				continue;
-			if (!(stamp.getItem() instanceof IStamps))
+			}
+			if (!(stamp.getItem() instanceof IStamps)) {
 				continue;
+			}
 
 			posted += ((IStamps) stamp.getItem()).getPostage(stamp).getValue() * stamp.stackSize;
 		}
@@ -161,31 +169,32 @@ public class Letter implements ILetter, INBTTagable {
 	public int requiredPostage() {
 
 		int required = 1;
-		for (ItemStack attach : getAttachments())
-			if (attach != null)
+		for (ItemStack attach : getAttachments()) {
+			if (attach != null) {
 				required++;
+			}
+		}
 
 		return required;
 	}
 
 	@Override
 	public void addStamps(ItemStack stamps) {
-		this.inventory.tryAddStack(stamps, SLOT_POSTAGE_1, 4, false);
+		InventoryUtil.tryAddStack(inventory, stamps, SLOT_POSTAGE_1, 4, false);
 	}
 
 	@Override
 	public boolean hasRecipient() {
-		if (getRecipients().length <= 0)
+		if (getRecipients().length <= 0) {
 			return false;
+		}
 
 		IMailAddress recipient = getRecipients()[0];
-		if (recipient == null)
+		if (recipient == null) {
 			return false;
+		}
 
-		if (StringUtils.isBlank(recipient.getName()))
-			return false;
-
-		return true;
+		return !StringUtils.isBlank(recipient.getName());
 	}
 
 	@Override
@@ -198,16 +207,13 @@ public class Letter implements ILetter, INBTTagable {
 		return sender;
 	}
 
-	public void setRecipients(IMailAddress[] recipients) {
-		this.recipient = recipients;
-	}
-
 	@Override
 	public void setRecipient(IMailAddress address) {
-		if (address == null)
-			this.recipient = new IMailAddress[] {};
-		else
-			this.recipient = new IMailAddress[] { address };
+		if (address == null) {
+			this.recipient = new IMailAddress[]{};
+		} else {
+			this.recipient = new IMailAddress[]{address};
+		}
 	}
 
 	@Override
@@ -217,14 +223,15 @@ public class Letter implements ILetter, INBTTagable {
 
 	@Override
 	public String getRecipientString() {
-		String recipientString = "";
+		StringBuilder recipientString = new StringBuilder();
 		for (IMailAddress address : recipient) {
-			if (recipientString.length() > 0)
-				recipientString += ", ";
-			recipientString += address.getName();
+			if (recipientString.length() > 0) {
+				recipientString.append(", ");
+			}
+			recipientString.append(address.getName());
 		}
 
-		return recipientString;
+		return recipientString.toString();
 	}
 
 	@Override
@@ -239,10 +246,12 @@ public class Letter implements ILetter, INBTTagable {
 
 	@Override
 	public void addTooltip(List<String> list) {
-		if (this.sender != null && StringUtils.isNotBlank(this.sender.getName()))
+		if (this.sender != null && StringUtils.isNotBlank(this.sender.getName())) {
 			list.add(StringUtil.localize("gui.mail.from") + ": " + this.sender.getName());
-		if (this.recipient != null && this.recipient.length > 0)
+		}
+		if (this.recipient != null && this.recipient.length > 0) {
 			list.add(StringUtil.localize("gui.mail.to") + ": " + this.getRecipientString());
+		}
 	}
 
 	// / IINVENTORY

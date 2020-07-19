@@ -4,13 +4,12 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.lepidopterology.entities;
 
-import forestry.lepidopterology.entities.EntityButterfly.EnumButterflyState;
 import net.minecraft.util.ChunkCoordinates;
 
 public abstract class AIButterflyInteract extends AIButterflyBase {
@@ -20,19 +19,21 @@ public abstract class AIButterflyInteract extends AIButterflyBase {
 	private boolean canInteract = false;
 	private boolean hasInteracted = false;
 
-	public AIButterflyInteract(EntityButterfly entity) {
+	protected AIButterflyInteract(EntityButterfly entity) {
 		super(entity);
 		setMutexBits(3);
 	}
 
 	@Override
 	public boolean shouldExecute() {
-		if (entity.getState() != EnumButterflyState.RESTING)
+		if (entity.getState() != EnumButterflyState.RESTING) {
 			return false;
+		}
 
 		rest = new ChunkCoordinates((int) entity.posX, ((int) Math.floor(entity.posY)) - 1, (int) entity.posZ);
-		if (entity.worldObj.isAirBlock(rest.posX, rest.posY, rest.posZ))
+		if (entity.worldObj.isAirBlock(rest.posX, rest.posY, rest.posZ)) {
 			return false;
+		}
 
 		canInteract = canInteract();
 

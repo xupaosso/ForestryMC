@@ -4,7 +4,7 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
@@ -18,7 +18,7 @@ public class SlotWorking extends SlotForestry {
 
 	public SlotWorking(IInventory iinventory, int i, int j, int k) {
 		super(iinventory, i, j, k);
-		setCanShift(false);
+		blockShift();
 	}
 
 	@Override
@@ -31,7 +31,7 @@ public class SlotWorking extends SlotForestry {
 	}
 
 	@Override
-	public boolean getHasStack() {
+	public boolean canTakeStack(EntityPlayer stack) {
 		return false;
 	}
 

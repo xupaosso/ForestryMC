@@ -4,36 +4,37 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.farming.logic;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import forestry.api.farming.Farmables;
-import forestry.api.farming.ICrop;
-import forestry.api.farming.IFarmHousing;
-import forestry.api.farming.IFarmable;
-import forestry.core.utils.Utils;
-import forestry.core.vect.Vect;
 import java.util.Collection;
 import java.util.Stack;
+
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
+import forestry.api.farming.FarmDirection;
+import forestry.api.farming.Farmables;
+import forestry.api.farming.ICrop;
+import forestry.api.farming.IFarmHousing;
+import forestry.api.farming.IFarmable;
+import forestry.core.utils.BlockUtil;
+import forestry.core.utils.vect.Vect;
+import forestry.core.utils.vect.VectUtil;
 
 public class FarmLogicInfernal extends FarmLogicHomogeneous {
 
 	public FarmLogicInfernal(IFarmHousing housing) {
-		super(housing,
-				new ItemStack[] { new ItemStack(Blocks.soul_sand) },
-				new ItemStack(Blocks.soul_sand),
-				Farmables.farmables.get("farmInfernal").toArray(new IFarmable[0]));
+		super(housing, new ItemStack(Blocks.soul_sand), new ItemStack(Blocks.soul_sand), Farmables.farmables.get("farmInfernal"));
 	}
 
 	@Override
@@ -63,16 +64,17 @@ public class FarmLogicInfernal extends FarmLogicHomogeneous {
 	}
 
 	@Override
-	public Collection<ICrop> harvest(int x, int y, int z, ForgeDirection direction, int extent) {
+	public Collection<ICrop> harvest(int x, int y, int z, FarmDirection direction, int extent) {
 		World world = getWorld();
 
-		Stack<ICrop> crops = new Stack<ICrop>();
+		Stack<ICrop> crops = new Stack<>();
 		for (int i = 0; i < extent; i++) {
 			Vect position = translateWithOffset(x, y + 1, z, direction, i);
 			for (IFarmable farmable : germlings) {
 				ICrop crop = farmable.getCropAt(world, position.x, position.y, position.z);
-				if (crop != null)
+				if (crop != null) {
 					crops.push(crop);
+				}
 			}
 
 		}
@@ -81,17 +83,19 @@ public class FarmLogicInfernal extends FarmLogicHomogeneous {
 	}
 
 	@Override
-	protected boolean maintainGermlings(int x, int y, int z, ForgeDirection direction, int extent) {
+	protected boolean maintainGermlings(int x, int y, int z, FarmDirection direction, int extent) {
 		World world = getWorld();
 
 		for (int i = 0; i < extent; i++) {
 			Vect position = translateWithOffset(x, y, z, direction, i);
-			if (!isAirBlock(position) && !Utils.isReplaceableBlock(world, position.x, position.y, position.z))
+			if (!VectUtil.isAirBlock(world, position) && !BlockUtil.isReplaceableBlock(world, position.x, position.y, position.z)) {
 				continue;
+			}
 
-			ItemStack below = getAsItemStack(position.add(0, -1, 0));
-			if (!isAcceptedGround(below))
+			ItemStack below = VectUtil.getAsItemStack(world, position.add(0, -1, 0));
+			if (!isAcceptedSoil(below)) {
 				continue;
+			}
 
 			return trySetCrop(position);
 		}
@@ -102,9 +106,11 @@ public class FarmLogicInfernal extends FarmLogicHomogeneous {
 	private boolean trySetCrop(Vect position) {
 		World world = getWorld();
 
-		for (IFarmable candidate : germlings)
-			if (housing.plantGermling(candidate, world, position.x, position.y, position.z))
+		for (IFarmable candidate : germlings) {
+			if (housing.plantGermling(candidate, world, position.x, position.y, position.z)) {
 				return true;
+			}
+		}
 
 		return false;
 	}

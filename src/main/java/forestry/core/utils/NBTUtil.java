@@ -11,9 +11,10 @@
 package forestry.core.utils;
 
 import com.google.common.collect.ForwardingList;
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagByte;
 import net.minecraft.nbt.NBTTagByteArray;
@@ -28,10 +29,12 @@ import net.minecraft.nbt.NBTTagLong;
 import net.minecraft.nbt.NBTTagShort;
 import net.minecraft.nbt.NBTTagString;
 
+import cpw.mods.fml.common.ObfuscationReflectionHelper;
+
 /**
  * @author CovertJaguar <http://www.railcraft.info/>
  */
-public class NBTUtil {
+public abstract class NBTUtil {
 
 	public enum EnumNBTType {
 
@@ -50,14 +53,15 @@ public class NBTUtil {
 		public static final EnumNBTType[] VALUES = values();
 		public final Class<? extends NBTBase> classObject;
 
-		private EnumNBTType(Class<? extends NBTBase> c) {
+		EnumNBTType(Class<? extends NBTBase> c) {
 			this.classObject = c;
 		}
 
 		public static EnumNBTType fromClass(Class<? extends NBTBase> c) {
 			for (EnumNBTType type : VALUES) {
-				if (type.classObject == c)
+				if (type.classObject == c) {
 					return type;
+				}
 			}
 			return null;
 		}
@@ -66,7 +70,7 @@ public class NBTUtil {
 
 	public static <T extends NBTBase> NBTList<T> getNBTList(NBTTagCompound nbt, String tag, EnumNBTType type) {
 		NBTTagList nbtList = nbt.getTagList(tag, type.ordinal());
-		return new NBTList<T>(nbtList);
+		return new NBTList<>(nbtList);
 	}
 
 	public static class NBTList<T extends NBTBase> extends ForwardingList<T> {

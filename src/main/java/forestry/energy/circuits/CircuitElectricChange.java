@@ -4,22 +4,21 @@
  * are made available under the terms of the GNU Lesser Public License v3
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.txt
- * 
+ *
  * Various Contributors including, but not limited to:
  * SirSengir (original work), CovertJaguar, Player, Binnie, MysteriousAges
  ******************************************************************************/
 package forestry.energy.circuits;
 
 import forestry.core.circuits.Circuit;
-import forestry.energy.gadgets.EngineTin;
-import net.minecraft.tileentity.TileEntity;
+import forestry.energy.tiles.TileEngineElectric;
 
 public abstract class CircuitElectricChange extends Circuit {
 
-	int euChange = 7;
-	int rfChange = 20;
+	private int euChange = 7;
+	private int rfChange = 20;
 
-	public CircuitElectricChange(String uid, boolean requiresDiscovery) {
+	protected CircuitElectricChange(String uid, boolean requiresDiscovery) {
 		super(uid, requiresDiscovery);
 	}
 
@@ -29,34 +28,36 @@ public abstract class CircuitElectricChange extends Circuit {
 	}
 
 	@Override
-	public boolean isCircuitable(TileEntity tile) {
-		return tile instanceof EngineTin;
+	public boolean isCircuitable(Object tile) {
+		return tile instanceof TileEngineElectric;
 	}
 
 	@Override
-	public void onInsertion(int slot, TileEntity tile) {
-		if (!isCircuitable(tile))
+	public void onInsertion(int slot, Object tile) {
+		if (!isCircuitable(tile)) {
 			return;
+		}
 
-		EngineTin engine = (EngineTin) tile;
+		TileEngineElectric engine = (TileEngineElectric) tile;
 		engine.changeEnergyConfig(euChange, rfChange, 2 * euChange);
 	}
 
 	@Override
-	public void onLoad(int slot, TileEntity tile) {
+	public void onLoad(int slot, Object tile) {
 		onInsertion(slot, tile);
 	}
 
 	@Override
-	public void onRemoval(int slot, TileEntity tile) {
-		if (!isCircuitable(tile))
+	public void onRemoval(int slot, Object tile) {
+		if (!isCircuitable(tile)) {
 			return;
+		}
 
-		EngineTin engine = (EngineTin) tile;
+		TileEngineElectric engine = (TileEngineElectric) tile;
 		engine.changeEnergyConfig(-euChange, -rfChange, -(2 * euChange));
 	}
 
 	@Override
-	public void onTick(int slot, TileEntity tile) {
+	public void onTick(int slot, Object tile) {
 	}
 }
